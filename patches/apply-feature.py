@@ -131,8 +131,7 @@ if old_status not in s: raise SystemExit("status function not found; refusing pa
 s = s.replace(old_status, new_status)
 
 # Apply Firestore snapshots inside the app's existing closure, without WebView reload.
-cloud_hook = r'''\
-window.applyCloudSnapshot = function(snapshot){
+cloud_hook = r'''\nwindow.applyCloudSnapshot = function(snapshot){
   if(!snapshot || typeof snapshot !== "object") return;
   var previousKey = (cur !== null && DATA[cur]) ? key(DATA[cur]) : null;
   try {
@@ -163,7 +162,7 @@ window.applyCloudSnapshot = function(snapshot){
 if 'window.applyCloudSnapshot = function(snapshot)' not in s:
     hook_marker = 'function status(){'
     if hook_marker not in s: raise SystemExit("status hook marker not found; refusing partial patch")
-    s = s.replace(hook_marker, cloud_hook + "\\n" + hook_marker, 1)
+    s = s.replace(hook_marker, cloud_hook + "\n" + hook_marker, 1)
 s = s.replace(
 '''    return '<div class="res" data-i="'+p[1]+'"><span><b>#'+r.s+'</b> '+esc(r.n)+(r.c?' <span class="chk">⚠</span>':'')+''',
 '''    return '<div class="res" data-i="'+p[1]+'"><span><b>#'+r.s+'</b> '+esc(r.n)+(CUTS[key(d)]?' <span class="cutTag">पर्ची कट चुकी</span>':'')+(r.c?' <span class="chk">⚠</span>':'')+''')
