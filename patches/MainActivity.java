@@ -43,8 +43,15 @@ public class MainActivity extends Activity {
     private FirebaseFirestore db;
     private GoogleSignInClient googleClient;
     private ListenerRegistration sharedListener;
+    private ListenerRegistration chunksListener;
     private ListenerRegistration cutsListener;
     private boolean cutsInitialSnapshotHandled;
+    private final Map<Integer, String> liveChunkParts = new HashMap<>();
+    private final Map<Integer, String> liveChunkRevisions = new HashMap<>();
+    private int liveChunkCount = 0;
+    private String liveSharedRevision = null;
+    private String lastDeliveredRevision = null;
+    private boolean liveChunksReady = false;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -116,25 +123,56 @@ public class MainActivity extends Activity {
     private void watchShared() {
         watchCuts();
         if(sharedListener!=null)sharedListener.remove();
+        if(chunksListener!=null)chunksListener.remove();
+        liveChunkParts.clear(); liveChunkRevisions.clear();
+        liveChunkCount=0; liveSharedRevision=null; lastDeliveredRevision=null; liveChunksReady=false;
         sharedListener=db.collection("voterData").document("shared").addSnapshotListener((d,e)->{
-            if(e!=null||d==null||!d.exists()){js("window.AuthUI&&window.AuthUI.onCloudData(null)");return;}
+            if(e!=null){js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote("Firebase सिंक सुनने में त्रुटि: "+e.getLocalizedMessage())+")");return;}
+            if(d==null||!d.exists()){js("window.AuthUI&&window.AuthUI.onCloudData(null)");return;}
             String legacy=d.getString("payload");
-            if(legacy!=null){js("window.AuthUI&&window.AuthUI.onCloudData(JSON.parse("+JSONObject.quote(legacy)+"))");return;}
+            if(legacy!=null){
+                lastDeliveredRevision="legacy:"+String.valueOf(d.getLong("updatedAt"));
+                js("window.AuthUI&&window.AuthUI.onCloudData(JSON.parse("+JSONObject.quote(legacy)+"))");
+                return;
+            }
             Long n=d.getLong("chunkCount");
             if(n==null||n<=0){js("window.AuthUI&&window.AuthUI.onCloudData(null)");return;}
-            int count=n.intValue();
-            db.collection("voterData").document("shared").collection("chunks").get().addOnSuccessListener(snap->{
-                String[] parts=new String[count];
-                for(DocumentSnapshot p:snap.getDocuments()){
-                    Long ix=p.getLong("index");String part=p.getString("part");
-                    if(ix!=null&&ix>=0&&ix<count&&part!=null)parts[ix.intValue()]=part;
-                }
-                StringBuilder joined=new StringBuilder();
-                for(String part:parts){if(part==null){js("window.AuthUI&&window.AuthUI.onError('Firebase डेटा अधूरा है; दोबारा सिंक करें।')");return;}joined.append(part);}
-                String payload=joined.toString();
-                js("window.AuthUI&&window.AuthUI.onCloudData(JSON.parse("+JSONObject.quote(payload)+"))");
-            }).addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote("Firebase डेटा लोड नहीं हुआ: "+err.getLocalizedMessage())+")"));
+            liveChunkCount=n.intValue();
+            liveSharedRevision=d.getString("revision");
+            publishLiveSharedChunks();
         });
+        chunksListener=db.collection("voterData").document("shared").collection("chunks")
+            .addSnapshotListener((snap,error)->{
+                if(error!=null){js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote("Firebase के लाइव डेटा में त्रुटि: "+error.getLocalizedMessage())+")");return;}
+                if(snap==null)return;
+                liveChunkParts.clear(); liveChunkRevisions.clear();
+                for(DocumentSnapshot p:snap.getDocuments()){
+                    Long ix=p.getLong("index"); String part=p.getString("part");
+                    if(ix!=null&&ix>=0&&part!=null){
+                        liveChunkParts.put(ix.intValue(),part);
+                        String rev=p.getString("revision");
+                        if(rev!=null)liveChunkRevisions.put(ix.intValue(),rev);
+                    }
+                }
+                liveChunksReady=true;
+                publishLiveSharedChunks();
+            });
+    }
+    private void publishLiveSharedChunks() {
+        if(!liveChunksReady || liveChunkCount<=0)return;
+        if(liveSharedRevision!=null && liveSharedRevision.equals(lastDeliveredRevision))return;
+        StringBuilder joined=new StringBuilder();
+        for(int i=0;i<liveChunkCount;i++){
+            String part=liveChunkParts.get(i);
+            if(part==null)return;
+            if(liveSharedRevision!=null && !liveSharedRevision.equals(liveChunkRevisions.get(i)))return;
+            joined.append(part);
+        }
+        String payload=joined.toString();
+        try { new JSONObject(payload); }
+        catch(Exception ex){ return; }
+        lastDeliveredRevision=liveSharedRevision;
+        js("window.AuthUI&&window.AuthUI.onCloudData(JSON.parse("+JSONObject.quote(payload)+"))");
     }
     private String cutDocId(String voterKey) {
         return Base64.encodeToString(voterKey.getBytes(java.nio.charset.StandardCharsets.UTF_8),
@@ -193,7 +231,7 @@ public class MainActivity extends Activity {
     private Map<String,Object> fields(Object... kv){Map<String,Object> m=new HashMap<>();for(int i=0;i+1<kv.length;i+=2)m.put(String.valueOf(kv[i]),kv[i+1]);return m;}
     @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);if(web!=null)web.saveState(out);}
     @Override public void onBackPressed(){if(web!=null)web.evaluateJavascript("(window.appBack && window.appBack()) === true",v->{if(!"true".equals(v))finish();});else finish();}
-    @Override protected void onDestroy(){if(sharedListener!=null)sharedListener.remove();if(cutsListener!=null)cutsListener.remove();if(web!=null){web.removeJavascriptInterface("AndroidApp");web.destroy();}super.onDestroy();}
+    @Override protected void onDestroy(){if(sharedListener!=null)sharedListener.remove();if(chunksListener!=null)chunksListener.remove();if(cutsListener!=null)cutsListener.remove();if(web!=null){web.removeJavascriptInterface("AndroidApp");web.destroy();}super.onDestroy();}
 
     private class Bridge {
         @JavascriptInterface public void signIn(){runOnUiThread(()->startActivityForResult(googleClient.getSignInIntent(),REQ_GOOGLE));}
@@ -228,29 +266,31 @@ public class MainActivity extends Activity {
             final int chunkSize=400000;
             final int count=Math.max(1,(upload.length()+chunkSize-1)/chunkSize);
             if(count>450){js("window.AuthUI&&window.AuthUI.onManualUploadResult(false,'डेटा बहुत बड़ा है; सुरक्षित बैचों में अपलोड करना होगा।')");return;}
+            String revision=java.util.UUID.randomUUID().toString();
             com.google.firebase.firestore.WriteBatch batch=db.batch();
             for(int i=0;i<count;i++){
                 int start=i*chunkSize,end=Math.min(upload.length(),start+chunkSize);
-                batch.set(db.collection("voterData").document("shared").collection("chunks").document(String.format(java.util.Locale.US,"p%05d",i)),fields("index",i,"part",upload.substring(start,end)));
+                batch.set(db.collection("voterData").document("shared").collection("chunks").document(String.format(java.util.Locale.US,"p%05d",i)),fields("index",i,"part",upload.substring(start,end),"revision",revision));
             }
-            batch.commit().addOnSuccessListener(v->
-                db.collection("voterData").document("shared").set(fields("chunkCount",count,"updatedBy",u.getEmail()==null?"":u.getEmail(),"updatedAt",System.currentTimeMillis()),SetOptions.merge())
+            batch.set(db.collection("voterData").document("shared"),fields("chunkCount",count,"revision",revision,"updatedBy",u.getEmail()==null?"":u.getEmail(),"updatedAt",System.currentTimeMillis()));
+            batch.commit()
                 .addOnSuccessListener(done->js("window.AuthUI&&window.AuthUI.onManualUploadResult(true,'अपलोड सफल! कुल डेटा Firebase पर सेव हो गया।')"))
-                .addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onManualUploadResult(false,"+JSONObject.quote("डेटा के हिस्से सेव हुए, लेकिन Firebase स्थिति अपडेट नहीं हुई: "+err.getLocalizedMessage())+")"))
-            ).addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onManualUploadResult(false,"+JSONObject.quote("Firebase अपलोड विफल: "+err.getLocalizedMessage())+")"));
+                .addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onManualUploadResult(false,"+JSONObject.quote("Firebase अपलोड विफल: "+err.getLocalizedMessage())+")"));
         }
         @JavascriptInterface public void saveSharedState(String payload){
             FirebaseUser u=auth.getCurrentUser();if(u==null||payload==null)return;
             Runnable save=()->{
                 final int chunkSize=400000;
                 final int count=Math.max(1,(payload.length()+chunkSize-1)/chunkSize);
+                if(count>450){js("window.AuthUI&&window.AuthUI.onError('वोटर डेटा बहुत बड़ा है; इसे सुरक्षित बैचों में सिंक करना होगा।')");return;}
+                final String revision=java.util.UUID.randomUUID().toString();
                 com.google.firebase.firestore.WriteBatch batch=db.batch();
                 for(int i=0;i<count;i++){
                     int start=i*chunkSize,end=Math.min(payload.length(),start+chunkSize);
-                    batch.set(db.collection("voterData").document("shared").collection("chunks").document(String.format(java.util.Locale.US,"p%05d",i)),fields("index",i,"part",payload.substring(start,end)));
+                    batch.set(db.collection("voterData").document("shared").collection("chunks").document(String.format(java.util.Locale.US,"p%05d",i)),fields("index",i,"part",payload.substring(start,end),"revision",revision));
                 }
-                batch.commit().addOnSuccessListener(v->db.collection("voterData").document("shared").set(fields("chunkCount",count,"updatedBy",u.getEmail()==null?"":u.getEmail(),"updatedAt",System.currentTimeMillis()),SetOptions.merge()))
-                  .addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote("Firebase में डेटा सेव नहीं हुआ: "+err.getLocalizedMessage())+")"));
+                batch.set(db.collection("voterData").document("shared"),fields("chunkCount",count,"revision",revision,"updatedBy",u.getEmail()==null?"":u.getEmail(),"updatedAt",System.currentTimeMillis()));
+                batch.commit().addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote("Firebase में डेटा सेव नहीं हुआ: "+err.getLocalizedMessage())+")"));
             };
             if(admin(u)){save.run();return;}
             db.collection("approvedUsers").document(u.getUid()).get().addOnSuccessListener(d->{if(d.exists())save.run();});
@@ -309,7 +349,7 @@ public class MainActivity extends Activity {
                 } catch (Exception ignored) { }
             });
         }
-        @JavascriptInterface public void signOut(){if(sharedListener!=null){sharedListener.remove();sharedListener=null;}if(cutsListener!=null){cutsListener.remove();cutsListener=null;}auth.signOut();googleClient.signOut();js("window.AuthUI&&window.AuthUI.onSignedOut()");}
+        @JavascriptInterface public void signOut(){if(sharedListener!=null){sharedListener.remove();sharedListener=null;}if(chunksListener!=null){chunksListener.remove();chunksListener=null;}if(cutsListener!=null){cutsListener.remove();cutsListener=null;}auth.signOut();googleClient.signOut();js("window.AuthUI&&window.AuthUI.onSignedOut()");}
         @JavascriptInterface public void printSlip(String title){runOnUiThread(()->{String job=(title==null||title.trim().isEmpty())?"Voter-Slip":title.trim();PrintManager pm=(PrintManager)getSystemService(Context.PRINT_SERVICE);PrintDocumentAdapter a=web.createPrintDocumentAdapter(job);PrintAttributes attrs=new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A5).build();pm.print(job,a,attrs);});}
     }
 }
