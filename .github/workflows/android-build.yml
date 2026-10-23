@@ -62,9 +62,8 @@ jobs:
       - name: Print debug APK signing SHA-1 for Google OAuth setup
         if: success()
         run: |
-          if [ -f "$HOME/.android/debug.keystore" ]; then
-            keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -keypass android 2>/dev/null | grep -E 'SHA1:' || true
-          fi
+          APK="$PROJECT_DIR/app/build/outputs/apk/debug/app-debug.apk"
+          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/apksigner" verify --print-certs "$APK" | grep -i 'SHA-1' || true
 
       - name: Deploy Firestore security rules when service credentials are configured
         continue-on-error: true
