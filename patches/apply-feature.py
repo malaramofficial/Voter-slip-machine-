@@ -29,6 +29,7 @@ s = s.replace(
       <div class="stat"><strong id="leftCount">0</strong><span>बाकी पर्चियाँ</span></div>
     </div>
     <div class="progress"><div id="cutProgress"></div></div>
+    <div style="margin-top:16px"><b>🏘️ वार्ड-वार पर्ची रिपोर्ट</b><div id="wardStats" style="margin-top:8px;overflow-x:auto"></div></div>
     <div class="row" style="margin-top:10px"><button class="alt" id="showHistory">📋 पर्ची हिस्ट्री देखें</button></div>
   </section>
   <section class="card hide" id="historyPanel">
@@ -55,7 +56,28 @@ function updateCutDashboard(){
   var total = DATA.length, cut = cutCount(), left = Math.max(0,total-cut);
   $("totalCount").textContent = total; $("cutCount").textContent = cut; $("leftCount").textContent = left;
   $("cutProgress").style.width = (total ? Math.round(cut*100/total) : 0) + "%";
+  renderWardStats();
   if(cur!==null) updateMarkButton();
+}
+function renderWardStats(){
+  var wards = {};
+  DATA.forEach(function(d){
+    var r=rec(d), ward=String(r.w||"").trim()||"अनिर्दिष्ट";
+    if(!wards[ward]) wards[ward]={total:0,cut:0};
+    wards[ward].total++;
+    if(CUTS[key(d)]) wards[ward].cut++;
+  });
+  var names=Object.keys(wards).sort(function(a,b){
+    var na=parseInt(a,10), nb=parseInt(b,10);
+    if(!isNaN(na)&&!isNaN(nb)) return na-nb;
+    return a.localeCompare(b,"hi");
+  });
+  var total=0, cut=0;
+  names.forEach(function(w){ total+=wards[w].total; cut+=wards[w].cut; });
+  if(!names.length){ $("wardStats").innerHTML='<p class="muted">वोटर डेटा लोड होने पर वार्ड-वार रिपोर्ट यहाँ दिखेगी।</p>'; return; }
+  $("wardStats").innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#eef4fa"><th style="padding:8px;text-align:left">वार्ड</th><th style="padding:8px;text-align:right">कुल</th><th style="padding:8px;text-align:right">कट चुकी</th><th style="padding:8px;text-align:right">बाकी</th></tr></thead><tbody>'+
+    names.map(function(w){var x=wards[w];return '<tr style="border-bottom:1px solid var(--bd)"><td style="padding:8px">वार्ड '+esc(w)+'</td><td style="padding:8px;text-align:right">'+x.total+'</td><td style="padding:8px;text-align:right;color:#166534;font-weight:bold">'+x.cut+'</td><td style="padding:8px;text-align:right;font-weight:bold">'+(x.total-x.cut)+'</td></tr>';}).join('')+
+    '<tr style="background:#f4f7fa;font-weight:bold"><td style="padding:8px">कुल</td><td style="padding:8px;text-align:right">'+total+'</td><td style="padding:8px;text-align:right">'+cut+'</td><td style="padding:8px;text-align:right">'+(total-cut)+'</td></tr></tbody></table>';
 }
 function updateMarkButton(){
   if(cur===null) return;
