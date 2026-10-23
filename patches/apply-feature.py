@@ -96,6 +96,7 @@ function showDataPage(page){
   if(page==="cut"||page==="left"){ renderStatusList(page==="cut"?"cut":"left",""); $("statusPageTitle").textContent=page==="cut"?"✅ जिनकी पर्ची कट चुकी है":"⏳ जिनकी पर्ची बाकी है"; }
 }
 function renderStatusList(kind, ward){
+  window.__statusListKind=kind; window.__statusListWard=ward;
   var q=norm($("statusSearch").value||""), list=$("statusList"), rows=[];
   DATA.forEach(function(d){var r=rec(d), w=String(r.w||"").trim()||"अनिर्दिष्ट", done=!!CUTS[key(d)]; if(ward!==""&&w!==ward)return; if(kind==="cut"&&!done)return; if(kind==="left"&&done)return; if(kind==="all"&&false)return; var hay=norm(r.n+" "+r.r+" "+r.h);if(q&&hay.indexOf(q)<0)return; rows.push({d:d,r:r,done:done,w:w});});
   if(!rows.length){list.innerHTML='<p class="muted">इस श्रेणी में कोई वोटर नहीं मिला।</p>';return;}
@@ -167,6 +168,7 @@ window.applyCloudCut = function(voterKey,payload,exists){
   try{localStorage.setItem("voterCuts3",JSON.stringify(CUTS));}catch(e){}
   if(typeof updateCutDashboard==="function")updateCutDashboard();
   if(typeof renderHistory==="function" && $("historyPanel") && !$("historyPanel").classList.contains("hide"))renderHistory();
+  if($("statusPage") && !$("statusPage").classList.contains("hide") && typeof renderStatusList==="function")renderStatusList(window.__statusListKind||"left",window.__statusListWard||"");
   if(cur!==null && typeof updateMarkButton==="function")updateMarkButton();
 };
 '''
