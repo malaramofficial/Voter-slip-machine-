@@ -165,9 +165,22 @@ nav_css = r'''
 #vsmBottomNav button.active{background:linear-gradient(135deg,#2784f5,#124eaa);color:#fff;box-shadow:0 4px 12px #155eef50;transform:translateY(-1px)}
 #vsmBottomNav button:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}
 #vsmBottomNav button span:last-child{white-space:nowrap}
+/* Keep the app header visible while the content area scrolls. */
+body>header,body>.header,body>#header,body>.app-header,body>.topbar{
+ position:sticky!important;top:0!important;z-index:9980!important;
+ padding-top:calc(10px + env(safe-area-inset-top,0px))!important;
+ box-shadow:0 5px 18px #00152b24;
+}
+body{padding-bottom:100px!important;background:#f3f6fb!important;color:#172b43}
+.card{border-radius:16px!important;border:1px solid #e2eaf3!important;box-shadow:0 5px 18px #15395b0b!important;margin:12px 10px!important;padding:15px!important}
+button{min-height:42px;border-radius:11px!important;font-weight:700!important;letter-spacing:.05px}
+input,select,textarea{max-width:100%;border-radius:11px!important;border:1px solid #cbd7e5!important;padding:12px!important;font-size:16px!important}
+input:focus,select:focus,textarea:focus{outline:2px solid #8dbbfa!important;border-color:#3679d8!important}
+h1{line-height:1.25!important;font-size:clamp(20px,5.2vw,28px)!important}
+#vsmBottomNav{padding-bottom:calc(7px + env(safe-area-inset-bottom,0px))}
+.vsm-nav-hidden{display:none!important}
 @media(max-width:360px){#vsmBottomNav{left:6px;right:6px;padding:5px;gap:3px}#vsmBottomNav button{font-size:10px;min-height:49px}}
-body{padding-bottom:100px!important}.vsm-nav-hidden{display:none!important}
-@media(min-width:760px){#vsmBottomNav{left:auto;right:22px;bottom:18px;width:360px}body{padding-bottom:90px!important}}
+@media(min-width:760px){#vsmBottomNav{left:auto;right:22px;bottom:18px;width:360px}body{padding-bottom:90px!important}.card{max-width:900px;margin:14px auto!important}}
 '''
 if 'id="vsmBottomNav"' not in s:
     s = s.replace("</style>", nav_css + "\n</style>", 1)
