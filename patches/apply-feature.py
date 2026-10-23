@@ -11,7 +11,7 @@ s = s.replace(
 '''  .actions { text-align:center; }
   .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:12px; }
   .stat { background:#fff; border:1px solid var(--bd); border-radius:10px; padding:12px 8px; text-align:center; }
-  .stat strong { display:block; font-size:24px; color:var(--c); }
+  .stat strong { display:block; font-size:24px; color:var(--c); }\n  .status-count { display:block; width:100%; border:0; background:transparent; color:var(--c); font-size:24px; font-weight:800; padding:0 0 4px; cursor:pointer; }
   .stat span { font-size:12px; color:#4a5a6a; }
   .progress { height:8px; background:#e1e8ef; border-radius:8px; overflow:hidden; margin-top:8px; }
   .progress > div { height:100%; width:0; background:#15803d; transition:width .2s; }
@@ -24,9 +24,9 @@ s = s.replace(
 '''  <section class="card" id="cutDashboard">
     <b>📊 पर्ची प्रगति</b>
     <div class="stats" style="margin-top:8px">
-      <div class="stat"><strong id="totalCount">0</strong><span>कुल वोटर</span></div>
-      <div class="stat"><strong id="cutCount">0</strong><span>पर्ची कट चुकी</span></div>
-      <div class="stat"><strong id="leftCount">0</strong><span>बाकी पर्चियाँ</span></div>
+      <div class="stat"><button id="totalCount" class="status-count" data-kind="all">0</button><span>कुल वोटर</span></div>
+      <div class="stat"><button id="cutCount" class="status-count" data-kind="cut">0</button><span>पर्ची कट चुकी</span></div>
+      <div class="stat"><button id="leftCount" class="status-count" data-kind="left">0</button><span>बाकी पर्चियाँ</span></div>
     </div>
     <div class="progress"><div id="cutProgress"></div></div>
     <div class="row" style="margin-top:12px;gap:6px;flex-wrap:wrap">
@@ -139,6 +139,7 @@ s = s.replace(
 '''$("print").onclick = doPrint;
 $("markCut").onclick = markCut;
 document.querySelectorAll("[data-page]").forEach(function(b){b.onclick=function(){showDataPage(b.getAttribute("data-page"));};});
+document.querySelector(".stats").addEventListener("click",function(e){var b=e.target.closest(".status-count");if(!b)return;var kind=b.getAttribute("data-kind");$("wardPage").classList.add("hide");$("statusPage").classList.remove("hide");$("statusPageTitle").textContent=kind==="cut"?"✅ सभी कटी पर्चियाँ":kind==="left"?"⏳ सभी बाकी पर्चियाँ":"👥 सभी वोटर";renderStatusList(kind,"");$("statusPage").scrollIntoView({behavior:"smooth",block:"start"});});
 $("wardStats").addEventListener("click",function(e){var b=e.target.closest(".ward-filter");if(!b)return;var w=b.getAttribute("data-ward"),kind=b.getAttribute("data-kind");$("wardPage").classList.add("hide");$("statusPage").classList.remove("hide");$("statusPageTitle").textContent="वार्ड "+w+" — "+(kind==="cut"?"कटी पर्चियाँ":kind==="left"?"बाकी पर्चियाँ":"सभी वोटर");renderStatusList(kind,w);$("statusPage").scrollIntoView({behavior:"smooth",block:"start"});});
 $("statusSearch").addEventListener("input",function(){var title=$("statusPageTitle").textContent,kind=title.indexOf("कटी")>=0?"cut":title.indexOf("बाकी")>=0?"left":"all";var m=title.match(/वार्ड\\s+([^ —]+)/);renderStatusList(kind,m?m[1]:"");});
 $("statusList").addEventListener("click",function(e){var b=e.target.closest("[data-open-voter]");if(!b)return;var k=b.getAttribute("data-open-voter"),i=DATA.findIndex(function(d){return key(d)===k;});if(i>=0)showSlip(i);});
