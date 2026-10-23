@@ -5,7 +5,7 @@
 #authGate .authbox:after{content:"🗳️";position:absolute;top:34px;left:50%;transform:translateX(-50%);font-size:30px}
 #authGate h2{margin:0 0 8px;font-size:25px;letter-spacing:-.4px;text-align:center;color:#102f50}
 #authGate .authbox>p{text-align:center;color:#617187;font-size:14px;line-height:1.65;margin:0 0 18px}
-#authGate button{width:100%;min-height:48px;margin:8px 0;padding:13px 16px;border:0;border-radius:13px;background:linear-gradient(110deg,#1769e8,#0d4eb3);color:#fff;font-weight:750;font-size:15px;letter-spacing:.1px;box-shadow:0 7px 16px #155eef30;transition:transform .15s,box-shadow .15s}
+#authGate button{width:100%;min-height:48px;margin:8px 0;padding:13px 16px;border:0;border-radius:13px;background:linear-gradient(110deg,#1769e8,#0d4eb3);color:#fff;font-weight:750;font-size:15px;letter-spacing:.1px;box-shadow:0 7px 16px #155eef30;transition:transform .15s,box-shadow .15s,filter .15s;cursor:pointer}#authGate button:hover{filter:brightness(1.04);box-shadow:0 9px 22px #155eef40}#authGate button:focus-visible{outline:3px solid #8dbbff;outline-offset:3px}#authGate button:disabled{opacity:.65;cursor:wait}#authGate #googleLogin{display:flex;align-items:center;justify-content:center;gap:12px;position:relative;background:#fff;color:#1f2937;border:1px solid #d8e0ea;box-shadow:0 5px 14px #102f5012;font-weight:750;min-height:56px}#authGate #googleLogin:hover{background:#f8fbff;border-color:#a9c5e8;box-shadow:0 8px 20px #102f501a}#authGate .google-mark{display:inline-flex;width:27px;height:27px;align-items:center;justify-content:center;border-radius:50%;font-family:Arial,sans-serif;font-size:23px;font-weight:800;color:#4285f4;background:conic-gradient(from -45deg,#4285f4 0 25%,#34a853 25% 48%,#fbbc05 48% 72%,#ea4335 72% 88%,#4285f4 88%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}#authGate .login-arrow{position:absolute;right:16px;color:#64748b;font-size:20px}
 #authGate button:active{transform:scale(.985);box-shadow:0 3px 8px #155eef25}
 #authGate button.secondary{background:#eef3f9;color:#203b5a;box-shadow:none;border:1px solid #dce5f0}
 #authMsg{background:#f5f8fc;color:#34465d;border:1px solid #e3eaf3;border-radius:12px;padding:12px 13px;white-space:pre-wrap;font-size:13px;line-height:1.5;margin:14px 0}
@@ -19,7 +19,7 @@
 <div id="authGate"><div class="authbox">
 <h2>🗳️ Voter Slip Machine</h2><p>वोटर डेटा सुरक्षित रखने के लिए Google से लॉगिन करें। नए यूज़र की अनुमति एडमिन देगा।</p>
 <div id="authUser"></div><div id="authMsg">लॉगिन की स्थिति जाँची जा रही है…</div>
-<button id="googleLogin">🔐 Google से लॉगिन करें</button>
+<button id="googleLogin" aria-label="Google से सुरक्षित लॉगिन करें"><span class="google-mark" aria-hidden="true">G</span><span>Google से सुरक्षित लॉगिन</span><span class="login-arrow" aria-hidden="true">→</span></button>
 <button id="requestAccess" class="secondary" style="display:none">अनुमति के लिए अनुरोध भेजें</button>
 <button id="checkAccess" class="secondary" style="display:none">अनुमति दोबारा जाँचें</button>
 <button id="logout" class="secondary" style="display:none">लॉगआउट</button>
