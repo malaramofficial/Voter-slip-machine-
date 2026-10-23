@@ -148,6 +148,61 @@ $("showHistory").onclick = function(){ renderHistory(); $("historyPanel").classL
 $("closeHistory").onclick = function(){ $("historyPanel").classList.add("hide"); };
 $("historySearch").addEventListener("input",renderHistory);
 $("historyList").addEventListener("click",function(e){ var b=e.target.closest("[data-uncut]"); if(!b) return; var k=b.getAttribute("data-uncut"); if(confirm("इस पर्ची को वापस बाकी में करें?")){ delete CUTS[k]; sv("voterCuts3",JSON.stringify(CUTS)); updateCutDashboard(); renderHistory(); if(cur!==null) showSlip(cur); } });''')
+
+# Add app-like navigation and group the main cards into separate views.
+nav_css = r'''
+/* App-like bottom navigation */
+#vsmBottomNav{position:fixed;z-index:9990;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:7px;background:rgba(8,31,56,.96);border:1px solid #ffffff20;border-radius:18px;box-shadow:0 10px 30px #00152b40;backdrop-filter:blur(14px)}
+#vsmBottomNav button{border:0;border-radius:12px;background:transparent;color:#cbd8e7;min-height:53px;padding:6px 2px;font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+#vsmBottomNav button .vsm-ico{font-size:19px;line-height:1.1}
+#vsmBottomNav button.active{background:linear-gradient(135deg,#1d74e8,#1554b3);color:#fff;box-shadow:0 4px 12px #155eef50}
+body{padding-bottom:100px!important}.vsm-nav-hidden{display:none!important}
+@media(min-width:760px){#vsmBottomNav{left:auto;right:22px;bottom:18px;width:360px}body{padding-bottom:90px!important}}
+'''
+if 'id="vsmBottomNav"' not in s:
+    s = s.replace("</style>", nav_css + "\n</style>", 1)
+    nav_html = r"""
+<nav id="vsmBottomNav" aria-label="मुख्य नेविगेशन">
+  <button type="button" data-vsm-page="home" class="active"><span class="vsm-ico">⌂</span><span>होम</span></button>
+  <button type="button" data-vsm-page="search"><span class="vsm-ico">⌕</span><span>वोटर खोजें</span></button>
+  <button type="button" data-vsm-page="reports"><span class="vsm-ico">▤</span><span>रिपोर्ट</span></button>
+  <button type="button" data-vsm-page="tools"><span class="vsm-ico">⚙</span><span>डेटा / टूल्स</span></button>
+</nav>
+<script>
+(function(){
+ function init(){
+  var nav=document.getElementById("vsmBottomNav");
+  if(!nav||nav.dataset.ready==="1")return;nav.dataset.ready="1";
+  var cards=Array.prototype.slice.call(document.querySelectorAll(".card"));
+  function group(c){
+   var id=(c.id||"").toLowerCase(),t=(c.innerText||c.textContent||"").toLowerCase();
+   if(id==="cutdashboard"||id==="historypanel"||/वार्ड-वार|पर्ची प्रगति|पर्ची हिस्ट्री|कटी पर्चियाँ|बाकी पर्चियाँ/.test(t))return "reports";
+   if(id==="searchcard"||/नाम \/ पिता|वोटर खोज|खोजें|सर्च/.test(t))return "search";
+   if(/आयात|इम्पोर्ट|import|export|निर्यात|बैकअप|backup|csv|json|डेटा अपलोड|डेटा डाउनलोड|फाइल चुनें|फाइल अपलोड/.test(t))return "tools";
+   if(/पर्ची|वोटर|मतदाता/.test(t))return "search";
+   return "home";
+  }
+  cards.forEach(function(c){c.dataset.vsmGroup=group(c)});
+  function show(page){
+   nav.querySelectorAll("button[data-vsm-page]").forEach(function(b){b.classList.toggle("active",b.dataset.vsmPage===page)});
+   cards.forEach(function(c){
+    var g=c.dataset.vsmGroup||"home";
+    var visible=page==="home"?(g==="home"||c.id==="cutDashboard"||c.id==="searchCard"):
+      page==="search"?(g==="search"||/slip|result|edit/i.test(c.id||"")):
+      page==="reports"?(g==="reports"||c.id==="cutDashboard"||c.id==="historyPanel"):g==="tools";
+    c.classList.toggle("vsm-nav-hidden",!visible);
+   });
+   window.scrollTo({top:0,behavior:"smooth"});
+  }
+  nav.addEventListener("click",function(e){var b=e.target.closest("button[data-vsm-page]");if(b)show(b.dataset.vsmPage)});
+  window.VoterSlipNav={show:show};show("home");
+ }
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
+})();
+</script>
+"""
+    s = s.replace("</body>", nav_html + "\n</body>", 1)
+
 html_path.write_text(s, encoding="utf-8")
 
 java_path = root / "app/src/main/java/com/example/voterslip/MainActivity.java"
