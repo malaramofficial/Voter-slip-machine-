@@ -29,7 +29,11 @@ s = s.replace(
       <div class="stat"><strong id="leftCount">0</strong><span>बाकी पर्चियाँ</span></div>
     </div>
     <div class="progress"><div id="cutProgress"></div></div>
-    <div style="margin-top:16px"><b>🏘️ वार्ड-वार पर्ची रिपोर्ट</b><div id="wardStats" style="margin-top:8px;overflow-x:auto"></div></div>
+    <div class="row" style="margin-top:12px;gap:6px;flex-wrap:wrap">
+      <button class="alt" data-page="home">🏠 होम</button><button class="alt" data-page="wards">🏘️ वार्ड रिपोर्ट</button><button class="alt" data-page="cut">✅ कटी पर्चियाँ</button><button class="alt" data-page="left">⏳ बाकी पर्चियाँ</button>
+    </div>
+    <div style="margin-top:16px" id="wardPage" class="hide"><b>🏘️ वार्ड-वार पर्ची रिपोर्ट</b><p class="muted">किसी वार्ड की संख्या पर क्लिक करके उस वार्ड की कटी या बाकी पर्चियों के नाम देखें।</p><div id="wardStats" style="margin-top:8px;overflow-x:auto"></div></div>
+    <div style="margin-top:16px" id="statusPage" class="hide"><b id="statusPageTitle">पर्ची सूची</b><input id="statusSearch" type="search" placeholder="नाम / पिता का नाम / मकान नंबर खोजें" style="width:100%;margin-top:10px"><div id="statusList" style="margin-top:8px"></div></div>
     <div class="row" style="margin-top:10px"><button class="alt" id="showHistory">📋 पर्ची हिस्ट्री देखें</button></div>
   </section>
   <section class="card hide" id="historyPanel">
@@ -76,8 +80,19 @@ function renderWardStats(){
   names.forEach(function(w){ total+=wards[w].total; cut+=wards[w].cut; });
   if(!names.length){ $("wardStats").innerHTML='<p class="muted">वोटर डेटा लोड होने पर वार्ड-वार रिपोर्ट यहाँ दिखेगी।</p>'; return; }
   $("wardStats").innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#eef4fa"><th style="padding:8px;text-align:left">वार्ड</th><th style="padding:8px;text-align:right">कुल</th><th style="padding:8px;text-align:right">कट चुकी</th><th style="padding:8px;text-align:right">बाकी</th></tr></thead><tbody>'+
-    names.map(function(w){var x=wards[w];return '<tr style="border-bottom:1px solid var(--bd)"><td style="padding:8px">वार्ड '+esc(w)+'</td><td style="padding:8px;text-align:right">'+x.total+'</td><td style="padding:8px;text-align:right;color:#166534;font-weight:bold">'+x.cut+'</td><td style="padding:8px;text-align:right;font-weight:bold">'+(x.total-x.cut)+'</td></tr>';}).join('')+
+    names.map(function(w){var x=wards[w];return '<tr style="border-bottom:1px solid var(--bd)"><td style="padding:8px">वार्ड '+esc(w)+'</td><td style="padding:8px;text-align:right"><button class="alt ward-filter" data-ward="'+esc(w)+'" data-kind="all">'+x.total+'</button></td><td style="padding:8px;text-align:right;color:#166534;font-weight:bold"><button class="alt ward-filter" data-ward="'+esc(w)+'" data-kind="cut">'+x.cut+'</button></td><td style="padding:8px;text-align:right;font-weight:bold"><button class="alt ward-filter" data-ward="'+esc(w)+'" data-kind="left">'+(x.total-x.cut)+'</button></td></tr>';}).join('')+
     '<tr style="background:#f4f7fa;font-weight:bold"><td style="padding:8px">कुल</td><td style="padding:8px;text-align:right">'+total+'</td><td style="padding:8px;text-align:right">'+cut+'</td><td style="padding:8px;text-align:right">'+(total-cut)+'</td></tr></tbody></table>';
+}
+function showDataPage(page){
+  $("wardPage").classList.toggle("hide",page!=="wards");
+  $("statusPage").classList.toggle("hide",page!=="cut"&&page!=="left");
+  if(page==="cut"||page==="left"){ renderStatusList(page==="cut"?"cut":"left",""); $("statusPageTitle").textContent=page==="cut"?"✅ जिनकी पर्ची कट चुकी है":"⏳ जिनकी पर्ची बाकी है"; }
+}
+function renderStatusList(kind, ward){
+  var q=norm($("statusSearch").value||""), list=$("statusList"), rows=[];
+  DATA.forEach(function(d){var r=rec(d), w=String(r.w||"").trim()||"अनिर्दिष्ट", done=!!CUTS[key(d)]; if(ward!==""&&w!==ward)return; if(kind==="cut"&&!done)return; if(kind==="left"&&done)return; if(kind==="all"&&false)return; var hay=norm(r.n+" "+r.r+" "+r.h);if(q&&hay.indexOf(q)<0)return; rows.push({d:d,r:r,done:done,w:w});});
+  if(!rows.length){list.innerHTML='<p class="muted">इस श्रेणी में कोई वोटर नहीं मिला।</p>';return;}
+  list.innerHTML=rows.map(function(x){return '<div class="historyItem"><b>'+esc(x.r.n)+'</b> '+(x.done?'<span class="cutTag">पर्ची कट चुकी</span>':'<span class="muted">पर्ची बाकी</span>')+'<div class="muted">वार्ड '+esc(x.w)+' • क्रमांक '+esc(x.r.s)+' • मकान '+esc(x.r.h)+'</div><div class="muted">'+esc(x.r.t)+' का नाम: '+esc(x.r.r)+'</div><button class="alt" style="margin-top:6px" data-open-voter="'+esc(key(x.d))+'">वोटर की पर्ची खोलें</button></div>';}).join('');
 }
 function updateMarkButton(){
   if(cur===null) return;
@@ -122,6 +137,11 @@ s = s.replace(
 s = s.replace(
 '$("print").onclick = doPrint;',
 '''$("print").onclick = doPrint;
+$("markCut").onclick = markCut;
+document.querySelectorAll("[data-page]").forEach(function(b){b.onclick=function(){showDataPage(b.getAttribute("data-page"));};});
+$("wardStats").addEventListener("click",function(e){var b=e.target.closest(".ward-filter");if(!b)return;var w=b.getAttribute("data-ward"),kind=b.getAttribute("data-kind");$("wardPage").classList.add("hide");$("statusPage").classList.remove("hide");$("statusPageTitle").textContent="वार्ड "+w+" — "+(kind==="cut"?"कटी पर्चियाँ":kind==="left"?"बाकी पर्चियाँ":"सभी वोटर");renderStatusList(kind,w);$("statusPage").scrollIntoView({behavior:"smooth",block:"start"});});
+$("statusSearch").addEventListener("input",function(){var title=$("statusPageTitle").textContent,kind=title.indexOf("कटी")>=0?"cut":title.indexOf("बाकी")>=0?"left":"all";var m=title.match(/वार्ड\\s+([^ —]+)/);renderStatusList(kind,m?m[1]:"");});
+$("statusList").addEventListener("click",function(e){var b=e.target.closest("[data-open-voter]");if(!b)return;var k=b.getAttribute("data-open-voter"),i=DATA.findIndex(function(d){return key(d)===k;});if(i>=0)showSlip(i);});
 $("markCut").onclick = markCut;
 $("showHistory").onclick = function(){ renderHistory(); $("historyPanel").classList.remove("hide"); $("historyPanel").scrollIntoView({behavior:"smooth",block:"start"}); };
 $("closeHistory").onclick = function(){ $("historyPanel").classList.add("hide"); };
