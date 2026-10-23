@@ -4,6 +4,7 @@ import sys
 root = Path(sys.argv[1])
 html_path = root / "app/src/main/assets/index.html"
 s = html_path.read_text(encoding="utf-8")
+s = s.replace('<h1>🗳️ वोटर पर्ची जनरेटर</h1>\n  <small id="hdrSub"></small>', '<h1>🗳️ वोटर पर्ची जनरेटर</h1>\n  <small id="hdrSub"></small>\n  <div style="margin-top:4px;font-size:13px;color:#e8f2ff;font-weight:600">डेवलपर: Mala Ram Godara</div>')
 
 s = s.replace(
 '  .actions { text-align:center; }',
@@ -148,7 +149,7 @@ new = '''        super.onCreate(savedInstanceState);
         root.addView(icon, new LinearLayout.LayoutParams(-1, dp(88)));
 
         TextView title = new TextView(this);
-        title.setText("वोटर पर्ची");
+        title.setText("वोटर पर्ची जनरेटर");
         title.setTextSize(27);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         title.setTextColor(Color.WHITE);
@@ -156,8 +157,8 @@ new = '''        super.onCreate(savedInstanceState);
         root.addView(title, new LinearLayout.LayoutParams(-1, dp(52)));
 
         TextView owner = new TextView(this);
-        owner.setText("माला राम गुद्धर");
-        owner.setTextSize(23);
+        owner.setText("डेवलपर: Mala Ram Godara");
+        owner.setTextSize(18);
         owner.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         owner.setTextColor(Color.rgb(255, 226, 145));
         owner.setGravity(Gravity.CENTER);
