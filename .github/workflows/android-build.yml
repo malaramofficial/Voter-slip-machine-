@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'VoterSlip_AndroidProject.zip'
+      - 'patches/apply-feature.py'
       - '.github/workflows/android-build.yml'
   workflow_dispatch:
 
@@ -21,6 +22,7 @@ jobs:
       - name: Extract Android project
         run: |
           unzip -q VoterSlip_AndroidProject.zip -d extracted
+          python3 patches/apply-feature.py "$GITHUB_WORKSPACE/extracted/VoterSlipApp"
           test -f extracted/VoterSlipApp/app/build.gradle.kts
           echo "PROJECT_DIR=$GITHUB_WORKSPACE/extracted/VoterSlipApp" >> "$GITHUB_ENV"
 
