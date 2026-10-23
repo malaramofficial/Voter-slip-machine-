@@ -3,7 +3,13 @@ import sys
 
 root = Path(sys.argv[1])
 html_path = root / "app/src/main/assets/index.html"
-s = html_path.read_text(encoding="utf-8")
+s = html_path.read_text(encoding="utf-8")\n
+# Force a true mobile viewport and fluid sizing in the embedded WebView.
+if re.search(r'<meta[^>]+name=["\\\']viewport["\\\'][^>]*>', s, re.I):
+    s = re.sub(r'<meta[^>]+name=["\\\']viewport["\\\'][^>]*>', '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">', s, count=1, flags=re.I)
+else:
+    s = re.sub(r'<head([^>]*)>', r'<head\\1>\\n<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">', s, count=1, flags=re.I)
+
 s = s.replace('<h1>🗳️ वोटर पर्ची जनरेटर</h1>\n  <small id="hdrSub"></small>', '<h1>🗳️ वोटर पर्ची जनरेटर</h1>\n  <small id="hdrSub"></small>\n  <div style="margin-top:4px;font-size:13px;color:#e8f2ff;font-weight:600">डेवलपर: Mala Ram Godara</div>')
 
 s = s.replace(
