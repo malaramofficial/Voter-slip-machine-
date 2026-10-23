@@ -1,8 +1,17 @@
 <style>
-#authGate{position:fixed;inset:0;z-index:99999;background:linear-gradient(145deg,#09213c,#174d70);display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto;font-family:inherit}
-#authGate .authbox{width:min(520px,100%);background:#fff;color:#172536;border-radius:18px;padding:22px;box-shadow:0 20px 60px #0005}
-#authGate h2{margin:0 0 8px;font-size:23px}#authGate p{line-height:1.55}#authGate button{width:100%;margin:7px 0;padding:12px;border:0;border-radius:9px;background:#155eef;color:#fff;font-weight:700;font-size:15px}
-#authGate button.secondary{background:#e9eef5;color:#17324b}#authMsg{background:#f1f5f9;color:#24364a;border-radius:8px;padding:10px;white-space:pre-wrap}
+#authGate{position:fixed;inset:0;z-index:99999;background:radial-gradient(circle at 15% 10%,#1d5c8e 0,#103b63 38%,#071b31 100%);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto;font-family:inherit}
+#authGate .authbox{position:relative;width:min(430px,100%);background:rgba(255,255,255,.98);color:#14243a;border:1px solid #ffffff80;border-radius:26px;padding:28px 24px 24px;box-shadow:0 28px 80px #0006}
+#authGate .authbox:before{content:"";display:block;width:64px;height:64px;margin:0 auto 16px;border-radius:20px;background:linear-gradient(135deg,#0d6efd,#063d78);box-shadow:0 10px 22px #155eef40}
+#authGate .authbox:after{content:"🗳️";position:absolute;top:34px;left:50%;transform:translateX(-50%);font-size:30px}
+#authGate h2{margin:0 0 8px;font-size:25px;letter-spacing:-.4px;text-align:center;color:#102f50}
+#authGate .authbox>p{text-align:center;color:#617187;font-size:14px;line-height:1.65;margin:0 0 18px}
+#authGate button{width:100%;min-height:48px;margin:8px 0;padding:13px 16px;border:0;border-radius:13px;background:linear-gradient(110deg,#1769e8,#0d4eb3);color:#fff;font-weight:750;font-size:15px;letter-spacing:.1px;box-shadow:0 7px 16px #155eef30;transition:transform .15s,box-shadow .15s}
+#authGate button:active{transform:scale(.985);box-shadow:0 3px 8px #155eef25}
+#authGate button.secondary{background:#eef3f9;color:#203b5a;box-shadow:none;border:1px solid #dce5f0}
+#authMsg{background:#f5f8fc;color:#34465d;border:1px solid #e3eaf3;border-radius:12px;padding:12px 13px;white-space:pre-wrap;font-size:13px;line-height:1.5;margin:14px 0}
+#authUser{font-size:12px;color:#617187;text-align:center;overflow-wrap:anywhere;margin:8px 0}
+#gateAdmin h3{color:#123b62;font-size:16px}
+@media(max-width:420px){#authGate .authbox{padding:24px 18px 20px;border-radius:22px}#authGate h2{font-size:22px}}
 #adminPanel{border:2px solid #0f766e;background:#f0fdfa;padding:12px;border-radius:12px;margin:10px 0;color:#123}
 #adminRequests .request,#gateRequests .request{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-top:1px solid #cbd5e1;padding:10px 0}
 #adminRequests .request button,#gateRequests .request button{width:auto;padding:8px 12px;margin:2px}#authUser{font-size:13px;color:#526579;overflow-wrap:anywhere}
