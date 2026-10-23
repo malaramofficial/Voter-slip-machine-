@@ -39,7 +39,7 @@
 <section id="adminPanel" style="display:none"><b>👑 एडमिन पैनल — यूज़र अनुमति</b><p style="margin:6px 0">केवल <b>malaramofficial@gmail.com</b> यूज़र अनुरोध मंज़ूर या अस्वीकार कर सकता है।</p><button id="adminRefresh" class="alt">यूज़र अनुरोध रीफ़्रेश करें</button><div id="adminRequests"></div></section>
 <script>
 (function(){
-var approved=false,isAdmin=false,user=null,applying=false,cloudSeen=false,timer=null;
+var approved=false,isAdmin=false,user=null,applying=false,cloudSeen=false,timer=null,cutsCollectionEmpty=null,legacyMigrationStarted=false;
 function $(id){return document.getElementById(id)} function msg(t){$('authMsg').textContent=t}
 function gate(v){$('authGate').style.display=v?'flex':'none'}
 function draw(){ $('adminUpload').style.display=isAdmin?'block':'none'; $('googleLogin').style.display=user?'none':'block'; $('requestAccess').style.display=user&&!approved&&!isAdmin&&$('authMsg').textContent.indexOf('अस्वीकृत')<0?'block':'none'; $('checkAccess').style.display=user&&!approved?'block':'none'; $('logout').style.display=user?'block':'none'; $('gateAdmin').style.display=isAdmin?'block':'none'; $('adminPanel').style.display=isAdmin?'block':'none'; $('authUser').textContent=user?(user.name||'')+' • '+(user.email||''):''; }
@@ -49,16 +49,22 @@ approved=!!ok;isAdmin=!!admin;if(!user&&window.AndroidApp){try{user=JSON.parse(A
 draw();if(approved||isAdmin){msg(isAdmin?'एडमिन लॉगिन सफल। यूज़र अनुरोध नियंत्रित कर सकते हैं।':'अनुमति मिल गई। साझा डेटा लोड हो रहा है…');gate(false);if(window.AndroidApp)AndroidApp.refreshRequests()}
 else{gate(true);if(status==='denied')msg('अनुरोध अस्वीकार किया गया है। एडमिन से संपर्क करें।');else if(status==='pending')msg('अनुमति अनुरोध भेजा जा चुका है। एडमिन की मंज़ूरी का इंतज़ार करें।');else if(status==='none')msg('लॉगिन सफल। वोटर डेटा के लिए अनुमति अनुरोध भेजें।');else msg('पहले Google से लॉगिन करें।');}
 }
-function state(){var o={};['voterData2','voterEdits2','voterFooter2','voterCuts3'].forEach(function(k){var v=localStorage.getItem(k);if(v!==null)o[k]=v});if(!o.voterData2&&window.VOTER_DATA)o.voterData2=JSON.stringify(window.VOTER_DATA);return o}
-function sync(){if(applying||(!approved&&!isAdmin)||!window.AndroidApp)return;clearTimeout(timer);timer=setTimeout(function(){try{AndroidApp.saveSharedState(JSON.stringify(state()))}catch(e){}},150)}
-function cloudData(o){if(!approved&&!isAdmin)return;if(!o){if(!cloudSeen){cloudSeen=true;if(isAdmin)sync();else msg('Firebase में अभी डेटा नहीं है। एडमिन के पहली बार सिंक करने का इंतज़ार करें।')}return}cloudSeen=true;applying=true;var changed=false;['voterData2','voterEdits2','voterFooter2','voterCuts3'].forEach(function(k){if(Object.prototype.hasOwnProperty.call(o,k)&&localStorage.getItem(k)!==String(o[k])){localStorage.setItem(k,String(o[k]));changed=true}});applying=false;if(changed){if(window.applyCloudSnapshot)window.applyCloudSnapshot(o);else window.dispatchEvent(new CustomEvent("voter-cloud-data-updated",{detail:o}));}}
+function state(includeCuts){var o={};var keys=['voterData2','voterEdits2','voterFooter2'];if(includeCuts)keys.push('voterCuts3');keys.forEach(function(k){var v=localStorage.getItem(k);if(v!==null)o[k]=v});if(!o.voterData2&&window.VOTER_DATA)o.voterData2=JSON.stringify(window.VOTER_DATA);return o}
+function maybeMigrateLegacyCuts(){if(!cloudSeen||cutsCollectionEmpty!==true||legacyMigrationStarted||(!approved&&!isAdmin)||!window.AndroidApp)return;legacyMigrationStarted=true;try{AndroidApp.migrateLegacyCuts(localStorage.getItem('voterCuts3')||'{}')}catch(e){}}
+function sync(){if(applying||(!approved&&!isAdmin)||!window.AndroidApp)return;clearTimeout(timer);timer=setTimeout(function(){try{AndroidApp.saveSharedState(JSON.stringify(state(false)))}catch(e){}},150)}
+function cloudData(o){if(!approved&&!isAdmin)return;if(!o){if(!cloudSeen){cloudSeen=true;if(isAdmin)sync();else msg('Firebase में अभी डेटा नहीं है। एडमिन के पहली बार सिंक करने का इंतज़ार करें।')}maybeMigrateLegacyCuts();return}cloudSeen=true;applying=true;var changed=false;['voterData2','voterEdits2','voterFooter2','voterCuts3'].forEach(function(k){if(Object.prototype.hasOwnProperty.call(o,k)&&localStorage.getItem(k)!==String(o[k])){localStorage.setItem(k,String(o[k]));changed=true}});applying=false;if(changed){if(window.applyCloudSnapshot)window.applyCloudSnapshot(o);else window.dispatchEvent(new CustomEvent("voter-cloud-data-updated",{detail:o}));}maybeMigrateLegacyCuts();}
 function requests(list){
 function esc(x){return String(x||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 var h=(list||[]).map(function(r){return '<div class="request"><span><b>'+esc(r.email)+'</b><br>'+esc(r.name)+'</span><span><button data-approve="'+esc(r.uid)+'" data-email="'+esc(r.email)+'" data-name="'+esc(r.name)+'">मंज़ूर</button><button class="secondary" data-deny="'+esc(r.uid)+'">अस्वीकार</button></span></div>'}).join('')||'<p>अभी कोई लंबित अनुरोध नहीं है।</p>';
 $('gateRequests').innerHTML=h;$('adminRequests').innerHTML=h;
 }
 function requestClick(e){var a=e.target.closest('[data-approve]'),d=e.target.closest('[data-deny]');if(a&&window.AndroidApp)AndroidApp.approveUser(a.dataset.approve,a.dataset.email,a.dataset.name);if(d&&window.AndroidApp)AndroidApp.denyUser(d.dataset.deny)}
-window.AuthUI={syncLocal:sync,onUser:onUser,onAccess:onAccess,onCloudData:cloudData,onRequests:requests,onAdminAction:function(t){msg(t);if(window.AndroidApp)AndroidApp.refreshRequests()},onError:function(t){msg(t)},onSignedOut:function(){user=null;approved=false;isAdmin=false;gate(true);draw();msg('लॉगआउट हो गया।')}};
+window.AuthUI={syncLocal:sync,onUser:onUser,onAccess:onAccess,onCloudData:cloudData,onRequests:requests,
+onCloudCutsReady:function(empty){cutsCollectionEmpty=!!empty;window.__canonicalCutsReady=true;maybeMigrateLegacyCuts();},
+onCloudCut:function(k,payload,exists){if(window.applyCloudCut)window.applyCloudCut(k,payload,exists);},
+onCutSaved:function(k,payload){if(window.applyCloudCut)window.applyCloudCut(k,payload,true);},
+onCutRemoved:function(k){if(window.applyCloudCut)window.applyCloudCut(k,'{}',false);},
+onCutSaveFailed:function(k,message){msg(message||'पर्ची सेव नहीं हुई।');},onAdminAction:function(t){msg(t);if(window.AndroidApp)AndroidApp.refreshRequests()},onError:function(t){msg(t)},onSignedOut:function(){user=null;approved=false;isAdmin=false;gate(true);draw();msg('लॉगआउट हो गया।')}};
 $('googleLogin').onclick=function(){if(window.AndroidApp)AndroidApp.signIn();else msg('Firebase-enabled Android APK आवश्यक है।')};
 $('requestAccess').onclick=function(){if(window.AndroidApp)AndroidApp.requestAccess()};$('checkAccess').onclick=function(){if(window.AndroidApp)AndroidApp.refreshAccess()};
 $('logout').onclick=function(){if(window.AndroidApp)AndroidApp.signOut()};
@@ -72,7 +78,7 @@ $('adminUploadVerify').onclick=function(){
 };
 $('adminUploadRun').onclick=function(){
  if(!isAdmin||!window.AndroidApp){$('adminUploadMsg').textContent='एडमिन लॉगिन उपलब्ध नहीं है।';return;}
- var o=state();
+ var o=state(true);
  if(!o.voterData2&&window.VOTER_DATA)o.voterData2=JSON.stringify(window.VOTER_DATA);
  if(!o.voterData2){$('adminUploadMsg').textContent='इस डिवाइस पर वोटर डेटा नहीं मिला।';return;}
  $('adminUploadRun').disabled=true;$('adminUploadMsg').textContent='अपलोड शुरू… कृपया ऐप बंद न करें।';
