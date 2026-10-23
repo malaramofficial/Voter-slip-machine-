@@ -172,6 +172,25 @@ public class MainActivity extends Activity {
             db.collection("accessRequests").document(uid).update("status","denied").addOnSuccessListener(v->{loadRequests();js("window.AuthUI&&window.AuthUI.onAdminAction('अनुरोध अस्वीकार हुआ।')");})
             .addOnFailureListener(e->js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote(e.getLocalizedMessage())+")"));
         }
+        @JavascriptInterface public void adminUploadSharedState(String payload){
+            FirebaseUser u=auth.getCurrentUser();
+            if(!admin(u)){js("window.AuthUI&&window.AuthUI.onManualUploadResult(false,'केवल अधिकृत एडमिन अपलोड कर सकता है।')");return;}
+            if(payload==null||payload.trim().isEmpty()){js("window.AuthUI&&window.AuthUI.onManualUploadResult(false,'अपलोड करने के लिए डेटा खाली है।')");return;}
+            final String upload=payload;
+            final int chunkSize=400000;
+            final int count=Math.max(1,(upload.length()+chunkSize-1)/chunkSize);
+            if(count>450){js("window.AuthUI&&window.AuthUI.onManualUploadResult(false,'डेटा बहुत बड़ा है; सुरक्षित बैचों में अपलोड करना होगा।')");return;}
+            com.google.firebase.firestore.WriteBatch batch=db.batch();
+            for(int i=0;i<count;i++){
+                int start=i*chunkSize,end=Math.min(upload.length(),start+chunkSize);
+                batch.set(db.collection("voterData").document("shared").collection("chunks").document(String.format(java.util.Locale.US,"p%05d",i)),fields("index",i,"part",upload.substring(start,end)));
+            }
+            batch.commit().addOnSuccessListener(v->
+                db.collection("voterData").document("shared").set(fields("chunkCount",count,"updatedBy",u.getEmail()==null?"":u.getEmail(),"updatedAt",System.currentTimeMillis()),SetOptions.merge())
+                .addOnSuccessListener(done->js("window.AuthUI&&window.AuthUI.onManualUploadResult(true,'अपलोड सफल! कुल डेटा Firebase पर सेव हो गया।')"))
+                .addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onManualUploadResult(false,"+JSONObject.quote("डेटा के हिस्से सेव हुए, लेकिन Firebase स्थिति अपडेट नहीं हुई: "+err.getLocalizedMessage())+")"))
+            ).addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onManualUploadResult(false,"+JSONObject.quote("Firebase अपलोड विफल: "+err.getLocalizedMessage())+")"));
+        }
         @JavascriptInterface public void saveSharedState(String payload){
             FirebaseUser u=auth.getCurrentUser();if(u==null||payload==null)return;
             Runnable save=()->{
