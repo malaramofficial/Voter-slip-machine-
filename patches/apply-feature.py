@@ -129,6 +129,41 @@ function renderHistory(){
 }'''
 if old_status not in s: raise SystemExit("status function not found; refusing partial patch")
 s = s.replace(old_status, new_status)
+
+# Apply Firestore snapshots inside the app's existing closure, without WebView reload.
+cloud_hook = r'''
+window.applyCloudSnapshot = function(snapshot){
+  if(!snapshot || typeof snapshot !== "object") return;
+  var previousKey = (cur !== null && DATA[cur]) ? key(DATA[cur]) : null;
+  try {
+    if(Object.prototype.hasOwnProperty.call(snapshot,"voterData2")) {
+      var incoming = JSON.parse(String(snapshot.voterData2));
+      if(Array.isArray(incoming)) DATA = incoming;
+    }
+    if(Object.prototype.hasOwnProperty.call(snapshot,"voterEdits2")) {
+      var nextEdits = JSON.parse(String(snapshot.voterEdits2));
+      if(nextEdits && typeof nextEdits === "object") EDITS = nextEdits;
+    }
+    if(Object.prototype.hasOwnProperty.call(snapshot,"voterCuts3")) {
+      var nextCuts = JSON.parse(String(snapshot.voterCuts3));
+      if(nextCuts && typeof nextCuts === "object") CUTS = nextCuts;
+    }
+  } catch(e) { console.warn("Cloud snapshot apply failed",e); return; }
+  status();
+  if(typeof updateCutDashboard === "function") updateCutDashboard();
+  if(typeof renderHistory === "function" && $("historyPanel") && !$("historyPanel").classList.contains("hide")) renderHistory();
+  if(previousKey){ var nextIndex = DATA.findIndex(function(d){return key(d)===previousKey;}); cur = nextIndex >= 0 ? nextIndex : null; }
+  var editBox = $("editBox");
+  var editing = editBox && !editBox.classList.contains("hide") && editBox.contains(document.activeElement);
+  if(!editing && cur !== null && typeof showSlip === "function") showSlip(cur);
+  var searchCard = $("searchCard");
+  if(searchCard){ searchCard.querySelectorAll("input[type='search'],input[type='text']").forEach(function(input){ input.dispatchEvent(new Event("input",{bubbles:true})); }); }
+};
+'''
+if 'window.applyCloudSnapshot = function(snapshot)' not in s:
+    hook_marker = 'function status(){'
+    if hook_marker not in s: raise SystemExit("status hook marker not found; refusing partial patch")
+    s = s.replace(hook_marker, cloud_hook + "\n" + hook_marker, 1)
 s = s.replace(
 '''    return '<div class="res" data-i="'+p[1]+'"><span><b>#'+r.s+'</b> '+esc(r.n)+(r.c?' <span class="chk">⚠</span>':'')+''',
 '''    return '<div class="res" data-i="'+p[1]+'"><span><b>#'+r.s+'</b> '+esc(r.n)+(CUTS[key(d)]?' <span class="cutTag">पर्ची कट चुकी</span>':'')+(r.c?' <span class="chk">⚠</span>':'')+''')
