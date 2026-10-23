@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email == 'malaramofficial@gmail.com';
+    }
+
+    function isApproved() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/approvedUsers/$(request.auth.uid));
+    }
+
+    // Users may submit their own access request. Only the admin can approve or deny.
+    match /accessRequests/{uid} {
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.email == request.auth.token.email;
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    // The admin controls the approval list.
+    match /approvedUsers/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Shared voter data is available only to the admin and explicitly approved users.
+    match /voterData/{document=**} {
+      allow read, write: if isAdmin() || isApproved();
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
