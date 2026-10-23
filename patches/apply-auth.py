@@ -31,5 +31,8 @@ old = 'function sv(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }'
 new = 'function sv(k,v){ try{ localStorage.setItem(k,v); }catch(e){} try{ if(window.AuthUI && window.AuthUI.syncLocal) window.AuthUI.syncLocal(); }catch(e){} }'
 if old in s:
     s = s.replace(old, new)
+# Give the debounced cloud sync time to persist imported CSV/JSON before refreshing the page.
+s = s.replace('sv("voterData2", JSON.stringify(c)); sv("voterEdits2","{}"); location.reload();',
+              'sv("voterData2", JSON.stringify(c)); sv("voterEdits2","{}"); setTimeout(function(){ location.reload(); }, 1000);')
 html.write_text(s, encoding="utf-8")
 print("Google Sign-In, admin approval UI and shared Firestore sync patched.")
