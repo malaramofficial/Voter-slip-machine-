@@ -131,7 +131,8 @@ if old_status not in s: raise SystemExit("status function not found; refusing pa
 s = s.replace(old_status, new_status)
 
 # Apply Firestore snapshots inside the app's existing closure, without WebView reload.
-cloud_hook = r'''\nwindow.applyCloudSnapshot = function(snapshot){
+cloud_hook = r'''
+window.applyCloudSnapshot = function(snapshot){
   if(!snapshot || typeof snapshot !== "object") return;
   var previousKey = (cur !== null && DATA[cur]) ? key(DATA[cur]) : null;
   try {
