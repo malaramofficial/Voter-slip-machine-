@@ -25,13 +25,24 @@
 <button id="logout" class="secondary" style="display:none">लॉगआउट</button>
 <section id="gateAdmin" style="display:none;margin-top:12px"><h3>👑 एडमिन — यूज़र अनुरोध</h3><button id="refreshRequests" class="secondary">अनुरोध रीफ़्रेश करें</button><div id="gateRequests"></div></section>
 </div></div>
+<section id="adminUpload" style="display:none;border:1px solid #2563eb;background:#eff6ff;padding:10px;border-radius:10px;margin:10px 0;color:#123">
+<button id="adminUploadOpen" type="button" style="width:auto;min-height:38px;padding:8px 12px;margin:2px 0">🔐 एडमिन डेटा अपलोड</button>
+<div id="adminUploadForm" style="display:none;margin-top:8px">
+<label for="adminUploadPassword" style="display:block;font-weight:700;margin-bottom:5px">एडमिन पासवर्ड</label>
+<input id="adminUploadPassword" type="password" autocomplete="current-password" placeholder="पासवर्ड डालें" style="box-sizing:border-box;width:100%;padding:11px;border:1px solid #9ca3af;border-radius:8px">
+<button id="adminUploadVerify" type="button" style="width:100%;margin-top:8px">पासवर्ड जाँचें</button>
+<div id="adminUploadReady" style="display:none;margin-top:8px">
+<p>अपलोड करने पर इस डिवाइस का पूरा वोटर डेटा, सुधार, पर्ची-कट रिकॉर्ड और संबंधित डेटा Firebase में भेजा जाएगा।</p>
+<button id="adminUploadRun" type="button" style="width:100%;background:#047857">☁️ सारा डेटा Firebase पर अपलोड करें</button>
+</div><p id="adminUploadMsg" style="white-space:pre-wrap;font-size:13px"></p>
+</div></section>
 <section id="adminPanel" style="display:none"><b>👑 एडमिन पैनल — यूज़र अनुमति</b><p style="margin:6px 0">केवल <b>malaramofficial@gmail.com</b> यूज़र अनुरोध मंज़ूर या अस्वीकार कर सकता है।</p><button id="adminRefresh" class="alt">यूज़र अनुरोध रीफ़्रेश करें</button><div id="adminRequests"></div></section>
 <script>
 (function(){
 var approved=false,isAdmin=false,user=null,applying=false,cloudSeen=false,timer=null;
 function $(id){return document.getElementById(id)} function msg(t){$('authMsg').textContent=t}
 function gate(v){$('authGate').style.display=v?'flex':'none'}
-function draw(){ $('googleLogin').style.display=user?'none':'block'; $('requestAccess').style.display=user&&!approved&&!isAdmin&&$('authMsg').textContent.indexOf('अस्वीकृत')<0?'block':'none'; $('checkAccess').style.display=user&&!approved?'block':'none'; $('logout').style.display=user?'block':'none'; $('gateAdmin').style.display=isAdmin?'block':'none'; $('adminPanel').style.display=isAdmin?'block':'none'; $('authUser').textContent=user?(user.name||'')+' • '+(user.email||''):''; }
+function draw(){ $('adminUpload').style.display=isAdmin?'block':'none'; $('googleLogin').style.display=user?'none':'block'; $('requestAccess').style.display=user&&!approved&&!isAdmin&&$('authMsg').textContent.indexOf('अस्वीकृत')<0?'block':'none'; $('checkAccess').style.display=user&&!approved?'block':'none'; $('logout').style.display=user?'block':'none'; $('gateAdmin').style.display=isAdmin?'block':'none'; $('adminPanel').style.display=isAdmin?'block':'none'; $('authUser').textContent=user?(user.name||'')+' • '+(user.email||''):''; }
 function onUser(u){user=u;msg('Google लॉगिन सफल। अनुमति जाँची जा रही है…');draw();if(window.AndroidApp)AndroidApp.refreshAccess()}
 function onAccess(ok,admin,status){
 approved=!!ok;isAdmin=!!admin;if(!user&&window.AndroidApp){try{user=JSON.parse(AndroidApp.getSession()||'null')}catch(e){}}
@@ -53,6 +64,26 @@ $('requestAccess').onclick=function(){if(window.AndroidApp)AndroidApp.requestAcc
 $('logout').onclick=function(){if(window.AndroidApp)AndroidApp.signOut()};
 $('refreshRequests').onclick=$('adminRefresh').onclick=function(){if(window.AndroidApp)AndroidApp.refreshRequests()};
 $('gateRequests').addEventListener('click',requestClick);$('adminRequests').addEventListener('click',requestClick);
+$('adminUploadOpen').onclick=function(){if(!isAdmin){$('adminUploadMsg').textContent='केवल एडमिन उपयोग कर सकता है।';return;}$('adminUploadForm').style.display=$('adminUploadForm').style.display==='none'?'block':'none';};
+$('adminUploadVerify').onclick=function(){
+ if(!isAdmin){$('adminUploadMsg').textContent='केवल एडमिन उपयोग कर सकता है।';return;}
+ if($('adminUploadPassword').value!=='Mala'){$('adminUploadReady').style.display='none';$('adminUploadMsg').textContent='गलत पासवर्ड।';return;}
+ $('adminUploadMsg').textContent='पासवर्ड सही है।';$('adminUploadReady').style.display='block';
+};
+$('adminUploadRun').onclick=function(){
+ if(!isAdmin||!window.AndroidApp){$('adminUploadMsg').textContent='एडमिन लॉगिन उपलब्ध नहीं है।';return;}
+ var o=state();
+ if(!o.voterData2&&window.VOTER_DATA)o.voterData2=JSON.stringify(window.VOTER_DATA);
+ if(!o.voterData2){$('adminUploadMsg').textContent='इस डिवाइस पर वोटर डेटा नहीं मिला।';return;}
+ $('adminUploadRun').disabled=true;$('adminUploadMsg').textContent='अपलोड शुरू… कृपया ऐप बंद न करें।';
+ try{AndroidApp.adminUploadSharedState(JSON.stringify(o));}
+ catch(e){$('adminUploadRun').disabled=false;$('adminUploadMsg').textContent='अपलोड शुरू नहीं हुआ: '+e.message;}
+};
+window.AuthUI.onManualUploadResult=function(ok,message){
+ $('adminUploadRun').disabled=false;$('adminUploadMsg').textContent=message;
+ if(ok){$('adminUploadPassword').value='';$('adminUploadReady').style.display='none';}
+};
+
 if(window.AndroidApp){try{var u=JSON.parse(AndroidApp.getSession()||'null');if(u)onUser(u);else onAccess(false,false,'signedout')}catch(e){onAccess(false,false,'signedout')}}else{gate(true);msg('Firebase-enabled Android APK आवश्यक है।')}
 })();
 </script>
