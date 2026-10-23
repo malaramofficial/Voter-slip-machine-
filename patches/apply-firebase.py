@@ -9,7 +9,7 @@ app_config.parent.mkdir(parents=True, exist_ok=True)
 shutil.copy2(config, app_config)
 s=project.read_text()
 if 'com.google.gms.google-services' not in s:
- s=s.replace('id("com.android.application") version "8.5.2" apply false','id("com.android.application") version "8.5.2" apply false\n    id("com.google.gms.google-services") version "4.5.0" apply false')
+ s=s.replace('id("com.android.application") version "8.5.2" apply false','id("com.android.application") version "8.5.2" apply false\n    id("com.google.gms.google-services") version "4.4.2" apply false')
 project.write_text(s)
 s=module.read_text()
 if 'com.google.gms.google-services' not in s:
