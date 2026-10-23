@@ -11,6 +11,7 @@ on:
       - 'patches/MainActivity.java'
       - 'patches/auth-ui.html'
       - 'firebase/google-services.json'
+      - 'firebase.json'
       - 'firestore.rules'
       - '.github/workflows/android-build.yml'
   workflow_dispatch:
@@ -56,6 +57,21 @@ jobs:
 
       - name: Build Firebase-enabled debug APK
         run: gradle --no-daemon -p "$PROJECT_DIR" assembleDebug
+
+
+      - name: Deploy Firestore security rules when service credentials are configured
+        continue-on-error: true
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "${FIREBASE_SERVICE_ACCOUNT:-}" ]; then
+            echo "FIREBASE_SERVICE_ACCOUNT secret is not set; Firestore rules are committed but not deployed."
+            exit 0
+          fi
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
+          npm install --global firebase-tools
+          firebase deploy --only firestore:rules --project voter-slip-machine --non-interactive
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
