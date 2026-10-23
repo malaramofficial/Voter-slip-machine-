@@ -23,3 +23,12 @@ if 'android.permission.INTERNET' not in s:
 s=s.replace('    <!-- इंटरनेट की अनुमति जान-बूझकर नहीं दी गई: ऐप पूरी तरह ऑफ़लाइन चलता है। -->\n','')
 manifest.write_text(s)
 print('Firebase SDK and Android config applied')
+
+props = root / 'gradle.properties'
+ps = props.read_text(encoding='utf-8') if props.exists() else ''
+import re
+if re.search(r'^android\\.useAndroidX=.*$', ps, re.M):
+    ps = re.sub(r'^android\\.useAndroidX=.*$', 'android.useAndroidX=true', ps, flags=re.M)
+else:
+    ps += '\\nandroid.useAndroidX=true\\n'
+props.write_text(ps, encoding='utf-8')
