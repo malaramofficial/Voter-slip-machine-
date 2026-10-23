@@ -108,17 +108,18 @@ function updateMarkButton(){
   b.className = done ? "alt" : "";
 }
 function markCut(){
-  if(cur===null) return;
-  var d=DATA[cur], k=key(d), r=rec(d);
+  if(cur===null)return;
+  var d=DATA[cur],k=key(d),r=rec(d);
   if(CUTS[k]){
-    if(!confirm("क्या इस पर्ची को हिस्ट्री से हटाकर फिर से बाकी में दिखाना है?")) return;
-    delete CUTS[k];
-  } else {
-    if(!confirm("क्या इस वोटर की पर्ची वास्तव में काट/प्रिंट कर दी है? पुष्टि करने पर यह पर्ची कट चुकी में गिनी जाएगी।")) return;
-    CUTS[k]={w:r.w,s:r.s,n:r.n,t:r.t,rel:r.r,h:r.h,at:new Date().toISOString()};
+    if(!confirm("क्या इस पर्ची को हिस्ट्री से हटाकर फिर से बाकी में दिखाना है?"))return;
+    if(window.AndroidApp&&AndroidApp.removeVoterCut){AndroidApp.removeVoterCut(k);return;}
+    alert("पर्ची की साझा स्थिति बदलने के लिए Firebase कनेक्शन आवश्यक है।");
+    return;
   }
-  sv("voterCuts3",JSON.stringify(CUTS)); updateCutDashboard(); renderHistory();
-  if(cur!==null) showSlip(cur);
+  if(!confirm("क्या इस वोटर की पर्ची वास्तव में काट/प्रिंट कर दी है? पुष्टि करने पर यह पर्ची कट चुकी में गिनी जाएगी।"))return;
+  var cut={w:r.w,s:r.s,n:r.n,t:r.t,rel:r.r,h:r.h,at:new Date().toISOString()};
+  if(window.AndroidApp&&AndroidApp.createVoterCut){AndroidApp.createVoterCut(k,JSON.stringify(cut));return;}
+  alert("पर्ची की साझा स्थिति बदलने के लिए Firebase कनेक्शन आवश्यक है।");
 }
 function renderHistory(){
   var q=norm($("historySearch").value||""), list=$("historyList"), entries=[];
@@ -144,7 +145,7 @@ window.applyCloudSnapshot = function(snapshot){
       var nextEdits = JSON.parse(String(snapshot.voterEdits2));
       if(nextEdits && typeof nextEdits === "object") EDITS = nextEdits;
     }
-    if(Object.prototype.hasOwnProperty.call(snapshot,"voterCuts3")) {
+    if(Object.prototype.hasOwnProperty.call(snapshot,"voterCuts3") && !window.__canonicalCutsReady) {
       var nextCuts = JSON.parse(String(snapshot.voterCuts3));
       if(nextCuts && typeof nextCuts === "object") CUTS = nextCuts;
     }
@@ -158,6 +159,15 @@ window.applyCloudSnapshot = function(snapshot){
   if(!editing && cur !== null && typeof showSlip === "function") showSlip(cur);
   var searchCard = $("searchCard");
   if(searchCard){ searchCard.querySelectorAll("input[type='search'],input[type='text']").forEach(function(input){ input.dispatchEvent(new Event("input",{bubbles:true})); }); }
+};
+window.applyCloudCut = function(voterKey,payload,exists){
+  if(!voterKey)return;
+  if(exists){try{CUTS[voterKey]=typeof payload==="string"?JSON.parse(payload):payload;}catch(e){return;}}
+  else{delete CUTS[voterKey];}
+  try{localStorage.setItem("voterCuts3",JSON.stringify(CUTS));}catch(e){}
+  if(typeof updateCutDashboard==="function")updateCutDashboard();
+  if(typeof renderHistory==="function" && $("historyPanel") && !$("historyPanel").classList.contains("hide"))renderHistory();
+  if(cur!==null && typeof updateMarkButton==="function")updateMarkButton();
 };
 '''
 if 'window.applyCloudSnapshot = function(snapshot)' not in s:
@@ -189,7 +199,7 @@ $("markCut").onclick = markCut;
 $("showHistory").onclick = function(){ renderHistory(); $("historyPanel").classList.remove("hide"); $("historyPanel").scrollIntoView({behavior:"smooth",block:"start"}); };
 $("closeHistory").onclick = function(){ $("historyPanel").classList.add("hide"); };
 $("historySearch").addEventListener("input",renderHistory);
-$("historyList").addEventListener("click",function(e){ var b=e.target.closest("[data-uncut]"); if(!b) return; var k=b.getAttribute("data-uncut"); if(confirm("इस पर्ची को वापस बाकी में करें?")){ delete CUTS[k]; sv("voterCuts3",JSON.stringify(CUTS)); updateCutDashboard(); renderHistory(); if(cur!==null) showSlip(cur); } });''')
+$("historyList").addEventListener("click",function(e){var b=e.target.closest("[data-uncut]");if(!b)return;var k=b.getAttribute("data-uncut");if(confirm("इस पर्ची को वापस बाकी में करें?")){if(window.AndroidApp&&AndroidApp.removeVoterCut){AndroidApp.removeVoterCut(k);}else alert("पर्ची की साझा स्थिति बदलने के लिए Firebase कनेक्शन आवश्यक है।");}});''')
 
 # Add app-like navigation and group the main cards into separate views.
 nav_css = r'''
