@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.util.Base64;
 import android.os.Bundle;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
@@ -25,6 +26,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.SetOptions;
@@ -41,6 +43,8 @@ public class MainActivity extends Activity {
     private FirebaseFirestore db;
     private GoogleSignInClient googleClient;
     private ListenerRegistration sharedListener;
+    private ListenerRegistration cutsListener;
+    private boolean cutsInitialSnapshotHandled;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -110,6 +114,7 @@ public class MainActivity extends Activity {
         }).addOnFailureListener(e->js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote("अनुमति जाँच विफल: "+e.getLocalizedMessage())+")"));
     }
     private void watchShared() {
+        watchCuts();
         if(sharedListener!=null)sharedListener.remove();
         sharedListener=db.collection("voterData").document("shared").addSnapshotListener((d,e)->{
             if(e!=null||d==null||!d.exists()){js("window.AuthUI&&window.AuthUI.onCloudData(null)");return;}
@@ -131,6 +136,49 @@ public class MainActivity extends Activity {
             }).addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote("Firebase डेटा लोड नहीं हुआ: "+err.getLocalizedMessage())+")"));
         });
     }
+    private String cutDocId(String voterKey) {
+        return Base64.encodeToString(voterKey.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
+    }
+
+    private void watchCuts() {
+        if (cutsListener != null) cutsListener.remove();
+        cutsInitialSnapshotHandled = false;
+        cutsListener = db.collection("voterData").document("shared").collection("cuts")
+            .addSnapshotListener((snap, error) -> {
+                if (error != null || snap == null) {
+                    if (error != null) js("window.AuthUI&&window.AuthUI.onError(" + JSONObject.quote("कटिंग की लाइव स्थिति लोड नहीं हुई: " + error.getLocalizedMessage()) + ")");
+                    return;
+                }
+                if (!cutsInitialSnapshotHandled) {
+                    cutsInitialSnapshotHandled = true;
+                    js("window.AuthUI&&window.AuthUI.onCloudCutsReady(" + snap.isEmpty() + ")");
+                }
+                for (DocumentChange change : snap.getDocumentChanges()) {
+                    DocumentSnapshot d = change.getDocument();
+                    String voterKey = d.getString("voterKey");
+                    if (voterKey == null) continue;
+                    boolean exists = change.getType() != DocumentChange.Type.REMOVED;
+                    String payload = d.getString("payload");
+                    js("window.AuthUI&&window.AuthUI.onCloudCut(" + JSONObject.quote(voterKey) + "," +
+                        JSONObject.quote(payload == null ? "{}" : payload) + "," + exists + ")");
+                }
+            });
+    }
+
+    private void withCutWriteAccess(FirebaseUser u, String voterKey, Runnable action) {
+        if (u == null) {
+            js("window.AuthUI&&window.AuthUI.onCutSaveFailed(" + JSONObject.quote(voterKey) + ",'पहले लॉगिन करें।')");
+            return;
+        }
+        if (admin(u)) { action.run(); return; }
+        db.collection("approvedUsers").document(u.getUid()).get().addOnSuccessListener(d -> {
+            if (d.exists()) action.run();
+            else js("window.AuthUI&&window.AuthUI.onCutSaveFailed(" + JSONObject.quote(voterKey) + ",'इस खाते को साझा डेटा बदलने की अनुमति नहीं है।')");
+        }).addOnFailureListener(e ->
+            js("window.AuthUI&&window.AuthUI.onCutSaveFailed(" + JSONObject.quote(voterKey) + "," +
+               JSONObject.quote("अनुमति जाँच विफल: " + e.getLocalizedMessage()) + ")"));
+    }
     private void loadRequests() {
         if(!admin(auth.getCurrentUser()))return;
         db.collection("accessRequests").whereEqualTo("status","pending").get().addOnSuccessListener(snap->{
@@ -145,7 +193,7 @@ public class MainActivity extends Activity {
     private Map<String,Object> fields(Object... kv){Map<String,Object> m=new HashMap<>();for(int i=0;i+1<kv.length;i+=2)m.put(String.valueOf(kv[i]),kv[i+1]);return m;}
     @Override protected void onSaveInstanceState(Bundle out){super.onSaveInstanceState(out);if(web!=null)web.saveState(out);}
     @Override public void onBackPressed(){if(web!=null)web.evaluateJavascript("(window.appBack && window.appBack()) === true",v->{if(!"true".equals(v))finish();});else finish();}
-    @Override protected void onDestroy(){if(sharedListener!=null)sharedListener.remove();if(web!=null){web.removeJavascriptInterface("AndroidApp");web.destroy();}super.onDestroy();}
+    @Override protected void onDestroy(){if(sharedListener!=null)sharedListener.remove();if(cutsListener!=null)cutsListener.remove();if(web!=null){web.removeJavascriptInterface("AndroidApp");web.destroy();}super.onDestroy();}
 
     private class Bridge {
         @JavascriptInterface public void signIn(){runOnUiThread(()->startActivityForResult(googleClient.getSignInIntent(),REQ_GOOGLE));}
@@ -207,7 +255,61 @@ public class MainActivity extends Activity {
             if(admin(u)){save.run();return;}
             db.collection("approvedUsers").document(u.getUid()).get().addOnSuccessListener(d->{if(d.exists())save.run();});
         }
-        @JavascriptInterface public void signOut(){if(sharedListener!=null){sharedListener.remove();sharedListener=null;}auth.signOut();googleClient.signOut();js("window.AuthUI&&window.AuthUI.onSignedOut()");}
+        @JavascriptInterface public void createVoterCut(String voterKey, String payload) {
+            if (voterKey == null || voterKey.isEmpty() || payload == null || payload.isEmpty()) {
+                js("window.AuthUI&&window.AuthUI.onCutSaveFailed(" + JSONObject.quote(voterKey == null ? "" : voterKey) + ",'पर्ची का डेटा अधूरा है।')");
+                return;
+            }
+            final JSONObject parsed;
+            try { parsed = new JSONObject(payload); }
+            catch (Exception e) { js("window.AuthUI&&window.AuthUI.onCutSaveFailed(" + JSONObject.quote(voterKey) + ",'पर्ची का डेटा पढ़ा नहीं जा सका।')"); return; }
+            FirebaseUser u = auth.getCurrentUser();
+            withCutWriteAccess(u, voterKey, () -> {
+                com.google.firebase.firestore.DocumentReference ref = db.collection("voterData").document("shared").collection("cuts").document(cutDocId(voterKey));
+                Map<String,Object> cut = fields("voterKey", voterKey, "payload", parsed.toString(), "updatedBy", u.getEmail() == null ? "" : u.getEmail(), "updatedAt", System.currentTimeMillis());
+                db.runTransaction(transaction -> {
+                    DocumentSnapshot old = transaction.get(ref);
+                    if (old.exists()) throw new IllegalStateException("ALREADY_CUT");
+                    transaction.set(ref, cut);
+                    return null;
+                }).addOnSuccessListener(v -> js("window.AuthUI&&window.AuthUI.onCutSaved(" + JSONObject.quote(voterKey) + "," + JSONObject.quote(parsed.toString()) + ")"))
+                  .addOnFailureListener(e -> {
+                    String message = e.getMessage() != null && e.getMessage().contains("ALREADY_CUT") ? "यह पर्ची दूसरे काउंटर से पहले ही कट चुकी है। डेटा रीफ़्रेश कर लें।" : "पर्ची Firebase में सेव नहीं हुई: " + e.getLocalizedMessage();
+                    js("window.AuthUI&&window.AuthUI.onCutSaveFailed(" + JSONObject.quote(voterKey) + "," + JSONObject.quote(message) + ")");
+                  });
+            });
+        }
+
+        @JavascriptInterface public void removeVoterCut(String voterKey) {
+            if (voterKey == null || voterKey.isEmpty()) return;
+            FirebaseUser u = auth.getCurrentUser();
+            withCutWriteAccess(u, voterKey, () -> {
+                com.google.firebase.firestore.DocumentReference ref = db.collection("voterData").document("shared").collection("cuts").document(cutDocId(voterKey));
+                db.runTransaction(transaction -> { DocumentSnapshot old = transaction.get(ref); if (old.exists()) transaction.delete(ref); return null; })
+                  .addOnSuccessListener(v -> js("window.AuthUI&&window.AuthUI.onCutRemoved(" + JSONObject.quote(voterKey) + ")"))
+                  .addOnFailureListener(e -> js("window.AuthUI&&window.AuthUI.onCutSaveFailed(" + JSONObject.quote(voterKey) + "," + JSONObject.quote("पर्ची की स्थिति नहीं बदली: " + e.getLocalizedMessage()) + ")"));
+            });
+        }
+
+        @JavascriptInterface public void migrateLegacyCuts(String json) {
+            FirebaseUser u = auth.getCurrentUser();
+            if (u == null || json == null || json.trim().isEmpty()) return;
+            withCutWriteAccess(u, "", () -> {
+                try {
+                    JSONObject all = new JSONObject(json);
+                    java.util.Iterator<String> keys = all.keys();
+                    while (keys.hasNext()) {
+                        String voterKey = keys.next(); Object value = all.opt(voterKey);
+                        if (!(value instanceof JSONObject)) continue;
+                        String payload = ((JSONObject) value).toString();
+                        com.google.firebase.firestore.DocumentReference ref = db.collection("voterData").document("shared").collection("cuts").document(cutDocId(voterKey));
+                        Map<String,Object> cut = fields("voterKey", voterKey, "payload", payload, "updatedBy", u.getEmail() == null ? "" : u.getEmail(), "updatedAt", System.currentTimeMillis());
+                        db.runTransaction(transaction -> { DocumentSnapshot old = transaction.get(ref); if (!old.exists()) transaction.set(ref, cut); return null; });
+                    }
+                } catch (Exception ignored) { }
+            });
+        }
+        @JavascriptInterface public void signOut(){if(sharedListener!=null){sharedListener.remove();sharedListener=null;}if(cutsListener!=null){cutsListener.remove();cutsListener=null;}auth.signOut();googleClient.signOut();js("window.AuthUI&&window.AuthUI.onSignedOut()");}
         @JavascriptInterface public void printSlip(String title){runOnUiThread(()->{String job=(title==null||title.trim().isEmpty())?"Voter-Slip":title.trim();PrintManager pm=(PrintManager)getSystemService(Context.PRINT_SERVICE);PrintDocumentAdapter a=web.createPrintDocumentAdapter(job);PrintAttributes attrs=new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A5).build();pm.print(job,a,attrs);});}
     }
 }
