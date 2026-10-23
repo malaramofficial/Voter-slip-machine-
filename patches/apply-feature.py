@@ -183,7 +183,54 @@ h1{line-height:1.25!important;font-size:clamp(20px,5.2vw,28px)!important}
 @media(min-width:760px){#vsmBottomNav{left:auto;right:22px;bottom:18px;width:360px}body{padding-bottom:90px!important}.card{max-width:900px;margin:14px auto!important}}
 '''
 if 'id="vsmBottomNav"' not in s:
-    s = s.replace("</style>", nav_css + "\n</style>", 1)
+    home_css = r"""
+#vsmHomeDashboard{padding:18px 12px 8px;background:#f1f5fb;color:#20364d}
+#vsmHomeDashboard .vsm-greet{font-size:27px;font-weight:800;letter-spacing:-.4px;margin:3px 5px 4px}
+#vsmHomeDashboard .vsm-sub{font-size:15px;color:#748397;margin:0 5px 18px}
+#vsmHomeDashboard .vsm-home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#vsmHomeDashboard .vsm-tile{appearance:none;text-align:left;background:#fff;border:1px solid #e0e7ef;border-radius:22px;padding:17px 15px;min-height:166px;box-shadow:0 2px 4px #17324d06;color:#20364d;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:10px}
+#vsmHomeDashboard .vsm-tile .vsm-tile-icon{width:58px;height:58px;border-radius:19px;display:grid;place-items:center;font-size:27px;background:#e4efff;color:#2566a2}
+#vsmHomeDashboard .vsm-tile:nth-child(2) .vsm-tile-icon{background:#e0f6ed;color:#18845c}
+#vsmHomeDashboard .vsm-tile:nth-child(3) .vsm-tile-icon{background:#fff0d7;color:#a66a17}
+#vsmHomeDashboard .vsm-tile:nth-child(4) .vsm-tile-icon{background:#f0e6ff;color:#7443b3}
+#vsmHomeDashboard .vsm-tile strong{font-size:21px;line-height:1.25}
+#vsmHomeDashboard .vsm-tile small{font-size:13px;color:#778495;line-height:1.5}
+#vsmHomeDashboard .vsm-data-card{margin-top:14px;background:#fff;border:1px solid #e0e7ef;border-radius:22px;padding:18px;box-shadow:0 2px 4px #17324d06}
+#vsmHomeDashboard .vsm-data-top{display:flex;justify-content:space-between;align-items:center;font-size:21px;font-weight:800}
+#vsmHomeDashboard .vsm-loaded{font-size:12px;border-radius:20px;padding:5px 10px;background:#dcf7e8;color:#21845a}
+#vsmHomeDashboard .vsm-total-label{margin-top:18px;font-size:14px;color:#7b8796}
+#vsmHomeDashboard .vsm-total{font-size:43px;line-height:1.25;font-weight:800;color:#173a5b;margin:3px 0 12px}
+#vsmHomeDashboard .vsm-bar{height:8px;border-radius:20px;background:#e7edf4;overflow:hidden}
+#vsmHomeDashboard .vsm-bar span{display:block;width:0;height:100%;background:#347fca;border-radius:20px}
+#vsmHomeDashboard .vsm-note{margin-top:12px;color:#7b8796;font-size:13px}
+@media(max-width:360px){#vsmHomeDashboard .vsm-greet{font-size:24px}#vsmHomeDashboard .vsm-tile{padding:13px;min-height:152px}#vsmHomeDashboard .vsm-tile strong{font-size:18px}}
+"""
+    s = s.replace("</style>", nav_css + "\n" + home_css + "\n</style>", 1)
+    dashboard = r"""
+<section id="vsmHomeDashboard" aria-label="होम डैशबोर्ड">
+  <div class="vsm-greet">नमस्कार!</div>
+  <div class="vsm-sub">आज आप क्या करना चाहते हैं?</div>
+  <div class="vsm-home-grid">
+    <button type="button" class="vsm-tile" data-home-go="search"><span class="vsm-tile-icon">⌕</span><strong>वोटर खोजें</strong><small>नाम, पिता या मकान नंबर</small></button>
+    <button type="button" class="vsm-tile" data-home-go="search"><span class="vsm-tile-icon">▣</span><strong>पर्ची बनाएँ</strong><small>वोटर की पर्ची खोलें</small></button>
+    <button type="button" class="vsm-tile" data-home-go="search"><span class="vsm-tile-icon">♧</span><strong>वोटर सूची</strong><small>वार्ड और परिवार</small></button>
+    <button type="button" class="vsm-tile" data-home-go="reports"><span class="vsm-tile-icon">▥</span><strong>रिपोर्ट</strong><small>कुल वोटर और आँकड़े</small></button>
+  </div>
+  <div class="vsm-data-card">
+    <div class="vsm-data-top"><span>वोटर डेटा</span><span class="vsm-loaded" id="vsmDataState">जाँच जारी</span></div>
+    <div class="vsm-total-label">कुल वोटर</div>
+    <div class="vsm-total" id="vsmTotalVoters">—</div>
+    <div class="vsm-bar"><span id="vsmDataBar"></span></div>
+    <div class="vsm-note" id="vsmDataNote">डेटा लोड होने पर कुल संख्या यहाँ दिखेगी।</div>
+  </div>
+</section>
+"""
+    if 'id="vsmHomeDashboard"' not in s:
+        insert_at = s.find('<section class="card"')
+        if insert_at < 0:
+            insert_at = s.find('<section')
+        if insert_at >= 0:
+            s = s[:insert_at] + dashboard + "\n" + s[insert_at:]
     nav_html = r"""
 <nav id="vsmBottomNav" aria-label="मुख्य नेविगेशन">
   <button type="button" data-vsm-page="home" class="active"><span class="vsm-ico">⌂</span><span>होम</span></button>
@@ -207,10 +254,12 @@ if 'id="vsmBottomNav"' not in s:
   }
   cards.forEach(function(c){c.dataset.vsmGroup=group(c)});
   function show(page){
+   var home=document.getElementById("vsmHomeDashboard");
+   if(home)home.style.display=page==="home"?"block":"none";
    nav.querySelectorAll("button[data-vsm-page]").forEach(function(b){b.classList.toggle("active",b.dataset.vsmPage===page)});
    cards.forEach(function(c){
     var g=c.dataset.vsmGroup||"home";
-    var visible=page==="home"?(g==="home"||c.id==="cutDashboard"):
+    var visible=page==="home"?false:
       page==="search"?(g==="search"||/slip|result|edit/i.test(c.id||"")):
       page==="reports"?(g==="reports"||c.id==="cutDashboard"||c.id==="historyPanel"):g==="tools";
     c.classList.toggle("vsm-nav-hidden",!visible);
@@ -218,6 +267,14 @@ if 'id="vsmBottomNav"' not in s:
    window.scrollTo({top:0,behavior:"smooth"});
   }
   nav.addEventListener("click",function(e){var b=e.target.closest("button[data-vsm-page]");if(b)show(b.dataset.vsmPage)});
+  document.querySelectorAll("[data-home-go]").forEach(function(b){b.addEventListener("click",function(){show(b.getAttribute("data-home-go"));});});
+  function syncHomeData(){
+   var total=document.getElementById("totalCount"),cut=document.getElementById("cutCount"),state=document.getElementById("vsmDataState"),num=document.getElementById("vsmTotalVoters"),bar=document.getElementById("vsmDataBar"),note=document.getElementById("vsmDataNote");
+   if(!num)return;
+   var n=total?parseInt(total.textContent.replace(/[^0-9]/g,""),10):0, k=cut?parseInt(cut.textContent.replace(/[^0-9]/g,""),10):0;
+   if(n>0){num.textContent=n.toLocaleString("en-IN");state.textContent="लोडेड";bar.style.width=Math.round((k||0)*100/n)+"%";note.textContent="आपके लोड किए गए वोटर रिकॉर्ड";}else{num.textContent="—";state.textContent="डेटा नहीं";bar.style.width="0%";note.textContent="PDF से वोटर डेटा लोड होने पर संख्या यहाँ दिखेगी।";}
+  }
+  syncHomeData();setInterval(syncHomeData,1200);
   window.VoterSlipNav={show:show};show("home");
  }
  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
