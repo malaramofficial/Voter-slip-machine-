@@ -12,6 +12,7 @@ if 'com.google.gms.google-services' not in s:
  s=s.replace('id("com.android.application") version "8.5.2" apply false','id("com.android.application") version "8.5.2" apply false\n    id("com.google.gms.google-services") version "4.4.2" apply false')
 project.write_text(s)
 s=module.read_text()
+s=s.replace('minSdk = 21', 'minSdk = 23')
 if 'com.google.gms.google-services' not in s:
  s=s.replace('id("com.android.application")','id("com.android.application")\n    id("com.google.gms.google-services")')
 if 'firebase-firestore' not in s:
