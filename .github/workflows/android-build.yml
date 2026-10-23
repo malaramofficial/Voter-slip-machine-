@@ -7,6 +7,11 @@ on:
       - 'VoterSlip_AndroidProject.zip'
       - 'patches/apply-feature.py'
       - 'patches/apply-firebase.py'
+      - 'patches/apply-auth.py'
+      - 'patches/MainActivity.java'
+      - 'patches/auth-ui.html'
+      - 'firebase/google-services.json'
+      - 'firestore.rules'
       - '.github/workflows/android-build.yml'
   workflow_dispatch:
 
@@ -20,19 +25,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract Android project
+      - name: Extract and configure Android project
         env:
           FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
         run: |
+          set -euo pipefail
           unzip -q VoterSlip_AndroidProject.zip -d extracted
           python3 patches/apply-feature.py "$GITHUB_WORKSPACE/extracted/VoterSlipApp"
-          if [ -n "$FIREBASE_CONFIG_JSON" ]; then
+          if [ -n "${FIREBASE_CONFIG_JSON:-}" ]; then
             printf '%s' "$FIREBASE_CONFIG_JSON" > "$RUNNER_TEMP/google-services.json"
-            python3 patches/apply-firebase.py "$GITHUB_WORKSPACE/extracted/VoterSlipApp" "$RUNNER_TEMP/google-services.json"
           else
-            echo "FIREBASE_CONFIG_JSON secret is not set; building the current offline app."
+            cp firebase/google-services.json "$RUNNER_TEMP/google-services.json"
           fi
-          test -f extracted/VoterSlipApp/app/build.gradle.kts
+          python3 patches/apply-firebase.py "$GITHUB_WORKSPACE/extracted/VoterSlipApp" "$RUNNER_TEMP/google-services.json"
+          python3 patches/apply-auth.py "$GITHUB_WORKSPACE/extracted/VoterSlipApp" "$GITHUB_WORKSPACE/patches"
+          test -f extracted/VoterSlipApp/app/google-services.json
+          test -f extracted/VoterSlipApp/app/src/main/java/com/example/voterslip/MainActivity.java
           echo "PROJECT_DIR=$GITHUB_WORKSPACE/extracted/VoterSlipApp" >> "$GITHUB_ENV"
 
       - name: Set up Java 17
@@ -46,12 +54,12 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Build debug APK
+      - name: Build Firebase-enabled debug APK
         run: gradle --no-daemon -p "$PROJECT_DIR" assembleDebug
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: voter-slip-debug-apk
+          name: voter-slip-firebase-debug-apk
           path: extracted/VoterSlipApp/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
