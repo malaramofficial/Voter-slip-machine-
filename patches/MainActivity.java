@@ -113,9 +113,23 @@ public class MainActivity extends Activity {
         if(sharedListener!=null)sharedListener.remove();
         sharedListener=db.collection("voterData").document("shared").addSnapshotListener((d,e)->{
             if(e!=null||d==null||!d.exists()){js("window.AuthUI&&window.AuthUI.onCloudData(null)");return;}
-            String payload=d.getString("payload");
-            if(payload==null)js("window.AuthUI&&window.AuthUI.onCloudData(null)");
-            else js("window.AuthUI&&window.AuthUI.onCloudData(JSON.parse("+JSONObject.quote(payload)+"))");
+            String legacy=d.getString("payload");
+            if(legacy!=null){js("window.AuthUI&&window.AuthUI.onCloudData(JSON.parse("+JSONObject.quote(legacy)+"))");return;}
+            Long countValue=d.getLong("chunkCount");
+            if(countValue==null||countValue<=0){js("window.AuthUI&&window.AuthUI.onCloudData(null)");return;}
+            final int count=countValue.intValue();
+            db.collection("voterData").document("shared").collection("chunks").get()
+              .addOnSuccessListener(snap->{
+                String[] parts=new String[count];
+                for(DocumentSnapshot part:snap.getDocuments()){
+                    Long ix=part.getLong("index"); String value=part.getString("part");
+                    if(ix!=null&&ix>=0&&ix<count&&value!=null)parts[ix.intValue()]=value;
+                }
+                StringBuilder joined=new StringBuilder();
+                for(String part:parts){if(part==null){js("window.AuthUI&&window.AuthUI.onError('Firebase डेटा अधूरा है; दोबारा सिंक करें।')");return;}joined.append(part);}
+                String payload=joined.toString();
+                js("window.AuthUI&&window.AuthUI.onCloudData(JSON.parse("+JSONObject.quote(payload)+"))");
+              }).addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote("Firebase डेटा लोड नहीं हुआ: "+err.getLocalizedMessage())+")"));
         });
     }
     private void loadRequests() {
@@ -160,8 +174,18 @@ public class MainActivity extends Activity {
             .addOnFailureListener(e->js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote(e.getLocalizedMessage())+")"));
         }
         @JavascriptInterface public void saveSharedState(String payload){
-            FirebaseUser u=auth.getCurrentUser();if(u==null)return;
-            Runnable save=()->db.collection("voterData").document("shared").set(fields("payload",payload,"updatedBy",u.getEmail()==null?"":u.getEmail(),"updatedAt",System.currentTimeMillis()),SetOptions.merge());
+            FirebaseUser u=auth.getCurrentUser();if(u==null||payload==null)return;
+            Runnable save=()->{
+                final int chunkSize=400000;
+                final int count=Math.max(1,(payload.length()+chunkSize-1)/chunkSize);
+                com.google.firebase.firestore.WriteBatch batch=db.batch();
+                for(int i=0;i<count;i++){
+                    int start=i*chunkSize,end=Math.min(payload.length(),start+chunkSize);
+                    batch.set(db.collection("voterData").document("shared").collection("chunks").document(String.format(java.util.Locale.US,"p%05d",i)),fields("index",i,"part",payload.substring(start,end)));
+                }
+                batch.commit().addOnSuccessListener(v->db.collection("voterData").document("shared").set(fields("chunkCount",count,"updatedBy",u.getEmail()==null?"":u.getEmail(),"updatedAt",System.currentTimeMillis()),SetOptions.merge()))
+                  .addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote("Firebase में डेटा सेव नहीं हुआ: "+err.getLocalizedMessage())+")"));
+            };
             if(admin(u)){save.run();return;}
             db.collection("approvedUsers").document(u.getUid()).get().addOnSuccessListener(d->{if(d.exists())save.run();});
         }
