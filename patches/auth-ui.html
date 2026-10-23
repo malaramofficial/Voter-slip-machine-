@@ -44,6 +44,6 @@ $('requestAccess').onclick=function(){if(window.AndroidApp)AndroidApp.requestAcc
 $('logout').onclick=function(){if(window.AndroidApp)AndroidApp.signOut()};
 $('refreshRequests').onclick=$('adminRefresh').onclick=function(){if(window.AndroidApp)AndroidApp.refreshRequests()};
 $('gateRequests').addEventListener('click',requestClick);$('adminRequests').addEventListener('click',requestClick);
-if(window.AndroidApp){try{var u=JSON.parse(AndroidApp.getSession()||'null');if(u)onUser(u);else onAccess(false,false,'signedout')}catch(e){onAccess(false,false,'signedout')}}else{gate(true);msg('Firebase-enabled Android APK आवश्यक है।'}
+if(window.AndroidApp){try{var u=JSON.parse(AndroidApp.getSession()||'null');if(u)onUser(u);else onAccess(false,false,'signedout')}catch(e){onAccess(false,false,'signedout')}}else{gate(true);msg('Firebase-enabled Android APK आवश्यक है।')}
 })();
 </script>
