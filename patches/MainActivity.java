@@ -115,21 +115,20 @@ public class MainActivity extends Activity {
             if(e!=null||d==null||!d.exists()){js("window.AuthUI&&window.AuthUI.onCloudData(null)");return;}
             String legacy=d.getString("payload");
             if(legacy!=null){js("window.AuthUI&&window.AuthUI.onCloudData(JSON.parse("+JSONObject.quote(legacy)+"))");return;}
-            Long countValue=d.getLong("chunkCount");
-            if(countValue==null||countValue<=0){js("window.AuthUI&&window.AuthUI.onCloudData(null)");return;}
-            final int count=countValue.intValue();
-            db.collection("voterData").document("shared").collection("chunks").get()
-              .addOnSuccessListener(snap->{
+            Long n=d.getLong("chunkCount");
+            if(n==null||n<=0){js("window.AuthUI&&window.AuthUI.onCloudData(null)");return;}
+            int count=n.intValue();
+            db.collection("voterData").document("shared").collection("chunks").get().addOnSuccessListener(snap->{
                 String[] parts=new String[count];
-                for(DocumentSnapshot part:snap.getDocuments()){
-                    Long ix=part.getLong("index"); String value=part.getString("part");
-                    if(ix!=null&&ix>=0&&ix<count&&value!=null)parts[ix.intValue()]=value;
+                for(DocumentSnapshot p:snap.getDocuments()){
+                    Long ix=p.getLong("index");String part=p.getString("part");
+                    if(ix!=null&&ix>=0&&ix<count&&part!=null)parts[ix.intValue()]=part;
                 }
                 StringBuilder joined=new StringBuilder();
                 for(String part:parts){if(part==null){js("window.AuthUI&&window.AuthUI.onError('Firebase डेटा अधूरा है; दोबारा सिंक करें।')");return;}joined.append(part);}
                 String payload=joined.toString();
                 js("window.AuthUI&&window.AuthUI.onCloudData(JSON.parse("+JSONObject.quote(payload)+"))");
-              }).addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote("Firebase डेटा लोड नहीं हुआ: "+err.getLocalizedMessage())+")"));
+            }).addOnFailureListener(err->js("window.AuthUI&&window.AuthUI.onError("+JSONObject.quote("Firebase डेटा लोड नहीं हुआ: "+err.getLocalizedMessage())+")"));
         });
     }
     private void loadRequests() {
