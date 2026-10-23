@@ -7,8 +7,8 @@ s = html_path.read_text(encoding="utf-8")
 
 # Force a true mobile viewport and fluid sizing in the embedded WebView.
 viewport = '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">'
-if re.search(r'<meta[^>]+name=["\\']viewport["\\'][^>]*>', s, re.I):
-    s = re.sub(r'<meta[^>]+name=["\\']viewport["\\'][^>]*>', lambda m: viewport, s, count=1, flags=re.I)
+if 'name="viewport"' in s:
+    s = s.replace('width=device-width, initial-scale=1', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover', 1)
 else:
     s = s.replace("<head>", "<head>\\n" + viewport, 1)
 s = s.replace('<h1>🗳️ वोटर पर्ची जनरेटर</h1>\n  <small id="hdrSub"></small>', '<h1>🗳️ वोटर पर्ची जनरेटर</h1>\n  <small id="hdrSub"></small>\n  <div style="margin-top:4px;font-size:13px;color:#e8f2ff;font-weight:600">डेवलपर: Mala Ram Godara</div>')
