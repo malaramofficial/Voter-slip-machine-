@@ -155,7 +155,10 @@ nav_css = r'''
 #vsmBottomNav{position:fixed;z-index:9990;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:7px;background:rgba(8,31,56,.96);border:1px solid #ffffff20;border-radius:18px;box-shadow:0 10px 30px #00152b40;backdrop-filter:blur(14px)}
 #vsmBottomNav button{border:0;border-radius:12px;background:transparent;color:#cbd8e7;min-height:53px;padding:6px 2px;font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
 #vsmBottomNav button .vsm-ico{font-size:19px;line-height:1.1}
-#vsmBottomNav button.active{background:linear-gradient(135deg,#1d74e8,#1554b3);color:#fff;box-shadow:0 4px 12px #155eef50}
+#vsmBottomNav button.active{background:linear-gradient(135deg,#2784f5,#124eaa);color:#fff;box-shadow:0 4px 12px #155eef50;transform:translateY(-1px)}
+#vsmBottomNav button:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}
+#vsmBottomNav button span:last-child{white-space:nowrap}
+@media(max-width:360px){#vsmBottomNav{left:6px;right:6px;padding:5px;gap:3px}#vsmBottomNav button{font-size:10px;min-height:49px}}
 body{padding-bottom:100px!important}.vsm-nav-hidden{display:none!important}
 @media(min-width:760px){#vsmBottomNav{left:auto;right:22px;bottom:18px;width:360px}body{padding-bottom:90px!important}}
 '''
@@ -187,7 +190,7 @@ if 'id="vsmBottomNav"' not in s:
    nav.querySelectorAll("button[data-vsm-page]").forEach(function(b){b.classList.toggle("active",b.dataset.vsmPage===page)});
    cards.forEach(function(c){
     var g=c.dataset.vsmGroup||"home";
-    var visible=page==="home"?(g==="home"||c.id==="cutDashboard"||c.id==="searchCard"):
+    var visible=page==="home"?(g==="home"||c.id==="cutDashboard"):
       page==="search"?(g==="search"||/slip|result|edit/i.test(c.id||"")):
       page==="reports"?(g==="reports"||c.id==="cutDashboard"||c.id==="historyPanel"):g==="tools";
     c.classList.toggle("vsm-nav-hidden",!visible);
