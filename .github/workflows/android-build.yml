@@ -59,6 +59,13 @@ jobs:
         run: gradle --no-daemon -p "$PROJECT_DIR" assembleDebug
 
 
+      - name: Print debug APK signing SHA-1 for Google OAuth setup
+        if: success()
+        run: |
+          if [ -f "$HOME/.android/debug.keystore" ]; then
+            keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -keypass android 2>/dev/null | grep -E 'SHA1:' || true
+          fi
+
       - name: Deploy Firestore security rules when service credentials are configured
         continue-on-error: true
         env:
