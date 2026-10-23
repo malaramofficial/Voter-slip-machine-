@@ -159,10 +159,10 @@ $("historyList").addEventListener("click",function(e){ var b=e.target.closest("[
 # Add app-like navigation and group the main cards into separate views.
 nav_css = r'''
 /* App-like bottom navigation */
-#vsmBottomNav{position:fixed;z-index:9990;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:7px;background:rgba(8,31,56,.96);border:1px solid #ffffff20;border-radius:18px;box-shadow:0 10px 30px #00152b40;backdrop-filter:blur(14px)}
-#vsmBottomNav button{border:0;border-radius:12px;background:transparent;color:#cbd8e7;min-height:53px;padding:6px 2px;font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
-#vsmBottomNav button .vsm-ico{font-size:19px;line-height:1.1}
-#vsmBottomNav button.active{background:linear-gradient(135deg,#2784f5,#124eaa);color:#fff;box-shadow:0 4px 12px #155eef50;transform:translateY(-1px)}
+#vsmBottomNav{position:fixed;z-index:9990;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:7px 7px calc(7px + env(safe-area-inset-bottom,0px));background:rgba(255,255,255,.98);border:1px solid #e1e8f0;border-radius:0 0 24px 24px;box-shadow:0 -4px 18px #18324b12;backdrop-filter:blur(14px)}
+#vsmBottomNav button{border:0;border-radius:12px;background:transparent;color:#8491a2;min-height:53px;padding:6px 2px;font-size:11px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+#vsmBottomNav button .vsm-ico{font-size:21px;line-height:1.1}
+#vsmBottomNav button.active{background:transparent;color:#2167a8;box-shadow:none;transform:none}
 #vsmBottomNav button:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}
 #vsmBottomNav button span:last-child{white-space:nowrap}
 /* Keep the app header visible while the content area scrolls. */
