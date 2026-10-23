@@ -3,7 +3,8 @@ import sys
 
 root = Path(sys.argv[1])
 html_path = root / "app/src/main/assets/index.html"
-s = html_path.read_text(encoding="utf-8")\n
+s = html_path.read_text(encoding="utf-8")
+
 # Force a true mobile viewport and fluid sizing in the embedded WebView.
 viewport = '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">'
 if re.search(r'<meta[^>]+name=["\\']viewport["\\'][^>]*>', s, re.I):
