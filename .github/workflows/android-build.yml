@@ -44,3 +44,5 @@ jobs:
           name: voter-slip-debug-apk
           path: extracted/VoterSlipApp/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+# Trigger build on workflow update.
