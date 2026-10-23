@@ -6,6 +6,7 @@ on:
     paths:
       - 'VoterSlip_AndroidProject.zip'
       - 'patches/apply-feature.py'
+      - 'patches/apply-firebase.py'
       - '.github/workflows/android-build.yml'
   workflow_dispatch:
 
@@ -20,9 +21,17 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Extract Android project
+        env:
+          FIREBASE_CONFIG_JSON: ${{ secrets.FIREBASE_CONFIG_JSON }}
         run: |
           unzip -q VoterSlip_AndroidProject.zip -d extracted
           python3 patches/apply-feature.py "$GITHUB_WORKSPACE/extracted/VoterSlipApp"
+          if [ -n "$FIREBASE_CONFIG_JSON" ]; then
+            printf '%s' "$FIREBASE_CONFIG_JSON" > "$RUNNER_TEMP/google-services.json"
+            python3 patches/apply-firebase.py "$GITHUB_WORKSPACE/extracted/VoterSlipApp" "$RUNNER_TEMP/google-services.json"
+          else
+            echo "FIREBASE_CONFIG_JSON secret is not set; building the current offline app."
+          fi
           test -f extracted/VoterSlipApp/app/build.gradle.kts
           echo "PROJECT_DIR=$GITHUB_WORKSPACE/extracted/VoterSlipApp" >> "$GITHUB_ENV"
 
@@ -46,5 +55,3 @@ jobs:
           name: voter-slip-debug-apk
           path: extracted/VoterSlipApp/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-
-# Trigger build on workflow update.
