@@ -330,6 +330,57 @@ if 'id="vsmBottomNav"' not in s:
 """
     s = s.replace("</body>", nav_html + "\n</body>", 1)
 
+
+premium_css = r"""
+<style id="vsm-premium-ui">
+:root{--vsm-navy:#0b4f86;--vsm-blue:#1166a8;--vsm-ink:#172b40;--vsm-muted:#718096;--vsm-line:#e1e8f0;--vsm-bg:#f2f6fb;--vsm-green:#16835f;--vsm-shadow:0 7px 22px rgba(19,52,83,.07)}
+html{background:var(--vsm-bg);-webkit-text-size-adjust:100%}
+body{background:linear-gradient(180deg,#e9f2fb 0,#f3f6fa 250px,#f3f6fa 100%);color:var(--vsm-ink);font-family:system-ui,-apple-system,"Noto Sans Devanagari",Roboto,sans-serif;line-height:1.45;padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+header,.header,.app-header,#header{background:linear-gradient(115deg,#0b4f86,#1266a2)!important;color:#fff!important;box-shadow:0 3px 12px #0b3b6124}
+.card,.panel,.result-card,#cutDashboard,#historyPanel{background:rgba(255,255,255,.97)!important;border:1px solid var(--vsm-line)!important;border-radius:18px!important;box-shadow:var(--vsm-shadow)!important;padding:16px!important;margin:12px 10px!important}
+#vsmHomeDashboard{padding:20px 14px 14px!important;margin:0!important}
+#vsmHomeDashboard .vsm-greet{font-size:clamp(25px,6vw,31px)!important;font-weight:850!important;letter-spacing:-.7px!important;color:#123c60!important}
+#vsmHomeDashboard .vsm-sub{font-size:14px!important;color:#718096!important;margin:4px 0 18px!important}
+#vsmHomeDashboard .vsm-home-grid{gap:11px!important}
+#vsmHomeDashboard .vsm-tile{min-height:142px!important;text-align:left!important;align-items:flex-start!important;justify-content:flex-start!important;padding:15px!important;border:1px solid #e0e9f3!important;border-radius:18px!important;background:linear-gradient(150deg,#fff,#f8fbff)!important;box-shadow:0 5px 15px #183a5b0b!important;transition:transform .15s,box-shadow .15s!important}
+#vsmHomeDashboard .vsm-tile:active{transform:scale(.98)!important}
+#vsmHomeDashboard .vsm-tile-icon{width:43px!important;height:43px!important;border-radius:14px!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#e6f1fc!important;color:#0d5b98!important;font-size:25px!important;margin-bottom:11px!important}
+#vsmHomeDashboard .vsm-tile strong{font-size:16px!important;color:#193d5e!important}
+#vsmHomeDashboard .vsm-tile small{font-size:12px!important;color:#738196!important}
+#vsmHomeDashboard .vsm-data-card{border-radius:20px!important;padding:19px!important;border:1px solid #e0e8f1!important;box-shadow:var(--vsm-shadow)!important}
+#vsmHomeDashboard .vsm-data-top{font-size:17px!important;color:#203c56!important}
+#vsmHomeDashboard .vsm-total{font-size:42px!important;color:#0b548c!important}
+#vsmHomeDashboard .vsm-bar{height:9px!important}
+#vsmBottomNav{height:calc(68px + env(safe-area-inset-bottom))!important;padding:7px 8px calc(7px + env(safe-area-inset-bottom))!important;background:rgba(255,255,255,.96)!important;backdrop-filter:blur(16px)!important;border-top:1px solid #dfe7f0!important;box-shadow:0 -6px 20px #193b5b0b!important;z-index:9999!important}
+#vsmBottomNav button{border:0!important;border-radius:13px!important;background:transparent!important;color:#7b8795!important;font-size:11px!important;font-weight:650!important;min-height:49px!important}
+#vsmBottomNav button.active{color:#0c5a94!important;background:#e8f3fd!important}
+#vsmBottomNav .vsm-ico{font-size:21px!important;line-height:1.1!important}
+button{min-height:42px;touch-action:manipulation;font-family:inherit;font-weight:700;letter-spacing:0}
+input,select,textarea{max-width:100%;box-sizing:border-box!important;border:1px solid #d7e1ec!important;border-radius:12px!important;background:#fff!important;color:#18344e!important;min-height:44px;padding:11px 12px!important;font:inherit!important;outline:none;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:#2c7eb8!important;box-shadow:0 0 0 3px #2384c51c!important}
+button:focus-visible{outline:3px solid #8fc5f2!important;outline-offset:2px}
+#cutDashboard .stats{gap:8px!important}
+#cutDashboard .stat{border:1px solid #e2eaf3!important;border-radius:15px!important;padding:12px 5px!important;box-shadow:0 3px 10px #183a5b08!important}
+#cutDashboard .status-count{font-size:clamp(20px,5.8vw,28px)!important;color:#0b5c96!important}
+#cutDashboard .stat:nth-child(2) .status-count{color:#17835f!important}
+#cutDashboard .stat:nth-child(3) .status-count{color:#b56b17!important}
+#cutDashboard .stat span{font-size:11px!important;line-height:1.35!important}
+#cutDashboard .progress{height:9px!important;background:#e7edf4!important;border-radius:20px!important}
+#cutDashboard .progress>div{background:linear-gradient(90deg,#16845f,#31b37f)!important;border-radius:20px!important}
+#statusList .historyItem,#historyList .historyItem{padding:13px 2px!important}
+#statusList button,#historyList button,.ward-filter{min-height:34px!important;border-radius:9px!important}
+table{border-collapse:separate!important;border-spacing:0!important;overflow:hidden;border-radius:12px!important}
+th{background:#edf4fb!important;color:#284c6c!important}
+td,th{border-bottom:1px solid #e6edf4!important}
+.vsm-nav-hidden{display:none!important}
+@media(min-width:600px){body{max-width:760px;margin:0 auto;box-shadow:0 0 45px #193b5b0c}#vsmHomeDashboard{padding:28px 22px!important}.card,#cutDashboard,#historyPanel{margin:14px 16px!important;padding:20px!important}#vsmBottomNav{max-width:760px;left:50%;transform:translateX(-50%);width:100%}}
+@media(max-width:370px){#vsmHomeDashboard .vsm-home-grid{gap:8px!important}#vsmHomeDashboard .vsm-tile{min-height:128px!important;padding:12px!important}#vsmHomeDashboard .vsm-tile-icon{width:38px!important;height:38px!important}#cutDashboard .stat{padding:10px 3px!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
+"""
+if 'id="vsm-premium-ui"' not in s:
+    s = s.replace("</head>", premium_css + "\n</head>", 1)
+
 html_path.write_text(s, encoding="utf-8")
 
 java_path = root / "app/src/main/java/com/example/voterslip/MainActivity.java"
