@@ -26,9 +26,6 @@ print('Firebase SDK and Android config applied')
 
 props = root / 'gradle.properties'
 ps = props.read_text(encoding='utf-8') if props.exists() else ''
-import re
-if re.search(r'^android\\.useAndroidX=.*$', ps, re.M):
-    ps = re.sub(r'^android\\.useAndroidX=.*$', 'android.useAndroidX=true', ps, flags=re.M)
-else:
-    ps += '\\nandroid.useAndroidX=true\\n'
-props.write_text(ps, encoding='utf-8')
+lines = [line for line in ps.splitlines() if not line.strip().startswith('android.useAndroidX=')]
+lines.append('android.useAndroidX=true')
+props.write_text('\n'.join(lines) + '\n', encoding='utf-8')
